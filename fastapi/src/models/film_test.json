@@ -1,0 +1,22 @@
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "title": "Crescent Star",
+  "description": "In 1944, the Germans began rounding up the Jews of Rhodes.",
+  "creation_date": "2023-01-11",
+  "rating": 7.9,
+  "type": "movie",
+  "genres": [
+    "Drama",
+    "Short"
+  ],
+  "actors": [
+    "Darrell Geer",
+    "Michael Bond"
+  ],
+  "directors": [
+    "Turgut Turk Adiguzel"
+  ],
+  "writers": [
+    "Turgut Turk Adiguzel"
+  ]
+}

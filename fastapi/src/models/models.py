@@ -13,8 +13,16 @@ def orjson_dumps(v, *, default):
     return orjson.dumps(v, default=default).decode()
 
 
-class Film(BaseModel):
+class IdMixin(BaseModel):
     id: UUID
+
+    class Config:
+        # Заменяем стандартную работу с json на более быструю
+        json_loads = orjson.loads
+        json_dumps = orjson_dumps
+
+
+class Film(IdMixin):
     title: str
     description: str
     creation_date: date = None
@@ -24,7 +32,13 @@ class Film(BaseModel):
     directors: List[str] = ''
     writers: List[str] = ''
 
-    class Config:
-        # Заменяем стандартную работу с json на более быструю
-        json_loads = orjson.loads
-        json_dumps = orjson_dumps
+
+class Person(IdMixin):
+    full_name: str
+    role: str
+    film_ids: List[UUID]
+
+
+class Genre(IdMixin):
+    name: str
+    description: str
