@@ -3,7 +3,7 @@ FROM python:3.10
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV HOME=/home/app
-ENV APP_HOME=/home/app/fastapi
+ENV APP_HOME=/home/app/etl
 
 WORKDIR $APP_HOME
 
@@ -20,8 +20,6 @@ RUN groupadd -r app &&  \
 
 RUN chmod +x  $APP_HOME/entrypoint.sh
 
-EXPOSE 8000
-
 USER app
 
-ENTRYPOINT ["/home/app/fastapi/entrypoint.sh"]
+ENTRYPOINT ["/home/app/etl/entrypoint.sh"]
