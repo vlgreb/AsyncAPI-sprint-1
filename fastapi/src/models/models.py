@@ -41,8 +41,3 @@ class Film(IdMixin):
     actors: List[Person]
     directors: List[Person]
     writers: List[Person]
-
-
-if __name__ == '__main__':
-    film = Film.parse_file('film_test.json')
-    print(film)
