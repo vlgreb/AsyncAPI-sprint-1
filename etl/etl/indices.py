@@ -1,163 +1,139 @@
-settings = {
+SETTINGS = {
     "refresh_interval": "1s",
     "analysis": {
-      "filter": {
-        "english_stop": {
-          "type":       "stop",
-          "stopwords":  "_english_"
+        "filter": {
+            "english_stop": {
+                "type": "stop",
+                "stopwords": "_english_"
+            },
+            "english_stemmer": {
+                "type": "stemmer",
+                "language": "english"
+            },
+            "english_possessive_stemmer": {
+                "type": "stemmer",
+                "language": "possessive_english"
+            },
+            "russian_stop": {
+                "type": "stop",
+                "stopwords": "_russian_"
+            },
+            "russian_stemmer": {
+                "type": "stemmer",
+                "language": "russian"
+            }
         },
-        "english_stemmer": {
-          "type": "stemmer",
-          "language": "english"
-        },
-        "english_possessive_stemmer": {
-          "type": "stemmer",
-          "language": "possessive_english"
-        },
-        "russian_stop": {
-          "type":       "stop",
-          "stopwords":  "_russian_"
-        },
-        "russian_stemmer": {
-          "type": "stemmer",
-          "language": "russian"
+        "analyzer": {
+            "ru_en": {
+                "tokenizer": "standard",
+                "filter": [
+                    "lowercase",
+                    "english_stop",
+                    "english_stemmer",
+                    "english_possessive_stemmer",
+                    "russian_stop",
+                    "russian_stemmer"
+                ]
+            }
         }
-      },
-      "analyzer": {
-        "ru_en": {
-          "tokenizer": "standard",
-          "filter": [
-            "lowercase",
-            "english_stop",
-            "english_stemmer",
-            "english_possessive_stemmer",
-            "russian_stop",
-            "russian_stemmer"
-          ]
-        }
-      }
     }
-  }
+}
 
-movies_index = {
-  "settings": settings,
-  "mappings": {
+PERSONS_SETTINGS = {
+    "type": "nested",
     "dynamic": "strict",
     "properties": {
-      "id": {
+        "id": {
+            "type": "keyword"
+        },
+        "full_name": {
+            "type": "text",
+            "analyzer": "ru_en"
+        }
+    }
+}
+
+GENRE_SETTINGS = {
+    "id": {
         "type": "keyword"
-      },
-      "imdb_rating": {
-        "type": "float"
-      },
-      "genre": {
-        "type": "keyword"
-      },
-      "title": {
+    },
+    "name": {
         "type": "text",
         "analyzer": "ru_en",
         "fields": {
-          "raw": {
-            "type":  "keyword"
-          }
+            "raw": {
+                "type": "keyword"
+            }
         }
-      },
-      "description": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "director": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "actors_names": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "writers_names": {
-        "type": "text",
-        "analyzer": "ru_en"
-      },
-      "actors": {
-        "type": "nested",
-        "dynamic": "strict",
-        "properties": {
-          "id": {
-            "type": "keyword"
-          },
-          "name": {
-            "type": "text",
-            "analyzer": "ru_en"
-          }
-        }
-      },
-      "writers": {
-        "type": "nested",
-        "dynamic": "strict",
-        "properties": {
-          "id": {
-            "type": "keyword"
-          },
-          "name": {
-            "type": "text",
-            "analyzer": "ru_en"
-          }
-        }
-      }
     }
-  }
 }
 
-genre_index = {
-    "settings": settings,
+TEXT_SETTINGS = {
+    "type": "text",
+    "analyzer": "ru_en"
+}
+
+TEXT_KEYWORD_SETTINGS = {
+    "type": "text",
+    "analyzer": "ru_en",
+    "fields": {
+        "raw": {
+            "type": "keyword"
+        }
+    }
+}
+
+movies_index = {
+    "settings": SETTINGS,
     "mappings": {
         "dynamic": "strict",
         "properties": {
             "id": {
                 "type": "keyword"
             },
-            "name": {
-                "type": "text",
-                "analyzer": "ru_en",
-                "fields": {
-                    "raw": {
-                        "type": "keyword"
-                    }
-                }
-            }
+            "imdb_rating": {
+                "type": "float"
+            },
+            "genres": {
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": GENRE_SETTINGS
+            },
+            "creation_date": {
+                "type": "date"
+            },
+            "title": TEXT_KEYWORD_SETTINGS,
+            "description": TEXT_SETTINGS,
+            "actors_names": TEXT_SETTINGS,
+            "writers_names": TEXT_SETTINGS,
+            "actors": PERSONS_SETTINGS,
+            "writers": PERSONS_SETTINGS,
+            "directors": PERSONS_SETTINGS
         }
     }
 }
 
-person_index = {
-  "settings": settings,
-  "mappings": {
-    "dynamic": "strict",
-    "properties": {
-      "id": {
-        "type": "keyword"
-      },
-      "full_name": {
-        "type": "text",
-        "analyzer": "ru_en",
-        "fields": {
-          "raw": {
-            "type": "keyword"
-          }
-        }
-      },
-      "role": {
-        "type": "text",
-        "analyzer": "ru_en",
-        "fields": {
-          "raw": {
-            "type": "keyword"
-          }
-        }
-      },
-      "film_ids": {
-        "type": "keyword"
-      }
+genre_index = {
+    "settings": SETTINGS,
+    "mappings": {
+        "dynamic": "strict",
+        "properties": GENRE_SETTINGS
     }
-  }
+}
+
+person_index = {
+    "settings": SETTINGS,
+    "mappings": {
+        "dynamic": "strict",
+        "properties": {
+            "id": {
+                "type": "keyword"
+            },
+            "full_name": TEXT_KEYWORD_SETTINGS,
+            "role": TEXT_KEYWORD_SETTINGS,
+            "film_ids": {
+                "type": "keyword"
+            }
+        }
+    }
 }
