@@ -5,10 +5,10 @@ up:
 	make start-load-data-to-elastic
 
 build:
-	docker compose build --no-cache
+	docker-compose build --no-cache
 
 start:
-	docker compose up -d
+	docker-compose up -d
 
 fake-migrate:
 	docker-compose exec movies_admin python manage.py migrate --no-input --fake movies

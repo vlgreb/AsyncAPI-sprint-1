@@ -24,8 +24,8 @@ class IdMixin(BaseModel):
 
 class Person(IdMixin):
     full_name: str
-    role: List[str]
-    film_ids: List[UUID]
+    role: List[str] = []
+    film_ids: List[UUID] = []
 
 
 class Genre(IdMixin):
@@ -36,8 +36,10 @@ class Film(IdMixin):
     title: str
     description: str
     creation_date: date = None
-    rating: Optional[float] = None
-    genres: List[Genre]
-    actors: List[Person]
-    directors: List[Person]
-    writers: List[Person]
+    imdb_rating: Optional[float] = None
+    genres: List[Genre] = []
+    actors: List[Person] = []
+    actors_names: List[str] = []
+    directors: List[Person] = []
+    writers: List[Person] = []
+    writers_names: List[str] = []

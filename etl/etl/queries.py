@@ -29,7 +29,7 @@ WITH modified_genres AS (
 SELECT
    fw.id,
    fw.rating AS imdb_rating,
-   array_agg(DISTINCT g.name) as genre,
+   array_agg(DISTINCT g.name) as genres,
    fw.title,
    fw.description,
    ordered_records.modified,
@@ -40,7 +40,7 @@ SELECT
        json_agg(
            DISTINCT jsonb_build_object(
                'id', p.id,
-               'name', p.full_name
+               'full_name', p.full_name
            )
        ) FILTER (WHERE pfw.role = 'actor'),
        '[]'
@@ -49,7 +49,7 @@ SELECT
        json_agg(
            DISTINCT jsonb_build_object(
                'id', p.id,
-               'name', p.full_name
+               'full_name', p.full_name
            )
        ) FILTER (WHERE pfw.role = 'writer'),
        '[]'
