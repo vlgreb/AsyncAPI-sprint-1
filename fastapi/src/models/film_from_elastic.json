@@ -1,0 +1,27 @@
+{
+	"id": "01ab9e34-4ceb-4337-bb69-68a1b0de46b2",
+	"imdb_rating": 6.9,
+	"genres": ["Biography", "Documentary", "Music"],
+	"title": "Axl Rose: The Prettiest Star",
+	"description": "A biography of Axl Rose.",
+	"director": ["Angela Turner"],
+	"actors_names": ["Barbara Church", "Bernard Baur", "Gilby Clarke", "Steven Adler"],
+	"writers_names": ["Angela Turner"],
+	"actors": [{
+		"id": "0cce8da2-8839-4a78-a878-45f5252588c9",
+		"full_name": "Gilby Clarke"
+	}, {
+		"id": "1fe46055-fceb-4714-90be-5c3a8728d020",
+		"full_name": "Barbara Church"
+	}, {
+		"id": "89734888-0254-4040-b87c-30e2cb144d0d",
+		"full_name": "Bernard Baur"
+	}, {
+		"id": "8aee78d1-87f4-4269-bb10-3d58ab009c2c",
+		"full_name": "Steven Adler"
+	}],
+	"writers": [{
+		"id": "37c36461-9a0d-4fd9-b257-fae0b2b6e8ad",
+		"full_name": "Angela Turner"
+	}]
+}
