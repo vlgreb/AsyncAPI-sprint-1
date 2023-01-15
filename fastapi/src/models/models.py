@@ -22,17 +22,6 @@ class IdMixin(BaseModel):
         json_dumps = orjson_dumps
 
 
-class Film(IdMixin):
-    title: str
-    description: str
-    creation_date: date = None
-    rating: Optional[float] = None
-    genres: List[str] = ''
-    actors: List[str] = ''
-    directors: List[str] = ''
-    writers: List[str] = ''
-
-
 class Person(IdMixin):
     full_name: str
     role: str
@@ -41,4 +30,19 @@ class Person(IdMixin):
 
 class Genre(IdMixin):
     name: str
+
+
+class Film(IdMixin):
+    title: str
     description: str
+    creation_date: date = None
+    rating: Optional[float] = None
+    genres: List[Genre]
+    actors: List[Person]
+    directors: List[Person]
+    writers: List[Person]
+
+
+if __name__ == '__main__':
+    film = Film.parse_file('film_test.json')
+    print(film)

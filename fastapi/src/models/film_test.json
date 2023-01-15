@@ -6,17 +6,42 @@
   "rating": 7.9,
   "type": "movie",
   "genres": [
-    "Drama",
-    "Short"
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name": "Drama"
+    }
   ],
   "actors": [
-    "Darrell Geer",
-    "Michael Bond"
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa1",
+      "full_name": "Darrell Geer",
+      "role": "actor",
+      "film_ids": [
+        "3fa85f64-5717-4562-b3fc-2c963f66afa2",
+        "3fa85f64-5717-4562-b3fc-2c963f66afa3"
+      ]
+    }
   ],
   "directors": [
-    "Turgut Turk Adiguzel"
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa1",
+      "full_name": "Turgut Turk Adiguzel",
+      "role": "director",
+      "film_ids": [
+        "3fa85f64-5717-4562-b3fc-2c963f66afa2",
+        "3fa85f64-5717-4562-b3fc-2c963f66afa3"
+      ]
+    }
   ],
   "writers": [
-    "Turgut Turk Adiguzel"
+     {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa1",
+      "full_name": "Ivan Ivanov",
+      "role": "writer",
+      "film_ids": [
+        "3fa85f64-5717-4562-b3fc-2c963f66afa2",
+        "3fa85f64-5717-4562-b3fc-2c963f66afa3"
+      ]
+    }
   ]
 }
