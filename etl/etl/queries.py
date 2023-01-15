@@ -29,13 +29,33 @@ WITH modified_genres AS (
 SELECT
    fw.id,
    fw.rating AS imdb_rating,
-   array_agg(DISTINCT g.name) as genres,
+   COALESCE (
+       json_agg(
+           DISTINCT jsonb_build_object(
+               'id', g.id,
+               'name', g.name
+           )
+       ),
+       '[]'
+   ) as genres,
    fw.title,
    fw.description,
    ordered_records.modified,
-   COALESCE(array_agg(DISTINCT p.full_name) FILTER (WHERE pfw.role = 'director' AND p.full_name IS NOT NULL), '{{}}') AS director,
-   COALESCE(array_agg(DISTINCT p.full_name) FILTER (WHERE pfw.role = 'actor' AND p.full_name IS NOT NULL), '{{}}') AS actors_names,
-   COALESCE(array_agg(DISTINCT p.full_name) FILTER (WHERE pfw.role = 'writer' AND p.full_name IS NOT NULL), '{{}}') AS writers_names,
+   COALESCE (
+        array_agg(DISTINCT p.full_name) 
+            FILTER (WHERE pfw.role = 'director' AND p.full_name IS NOT NULL), 
+        '{{}}'
+   ) AS director,
+   COALESCE (
+        array_agg(DISTINCT p.full_name) 
+            FILTER (WHERE pfw.role = 'actor' AND p.full_name IS NOT NULL), 
+        '{{}}'
+   ) AS actors_names,
+   COALESCE (
+        array_agg(DISTINCT p.full_name) 
+            FILTER (WHERE pfw.role = 'writer' AND p.full_name IS NOT NULL), 
+        '{{}}'
+   ) AS writers_names,
    COALESCE (
        json_agg(
            DISTINCT jsonb_build_object(
