@@ -24,7 +24,7 @@ class IdMixin(BaseModel):
 
 class Person(IdMixin):
     full_name: str
-    role: str
+    role: List[str]
     film_ids: List[UUID]
 
 
