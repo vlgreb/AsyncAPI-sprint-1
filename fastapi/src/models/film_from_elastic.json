@@ -1,27 +1,39 @@
 {
-	"id": "01ab9e34-4ceb-4337-bb69-68a1b0de46b2",
-	"imdb_rating": 6.9,
-	"genres": ["Biography", "Documentary", "Music"],
-	"title": "Axl Rose: The Prettiest Star",
-	"description": "A biography of Axl Rose.",
-	"director": ["Angela Turner"],
-	"actors_names": ["Barbara Church", "Bernard Baur", "Gilby Clarke", "Steven Adler"],
-	"writers_names": ["Angela Turner"],
+	"id": "3d825f60-9fff-4dfe-b294-1a45fa1e115d",
+	"imdb_rating": 8.6,
+	"genres": [{
+		"id": "120a21cf-9097-479e-904a-13dd7198c1dd",
+		"name": "Adventure"
+	}, {
+		"id": "3d8d9bf5-0d90-4353-88ba-4ccc5d2c07ff",
+		"name": "Action"
+	}, {
+		"id": "6c162475-c7ed-4461-9184-001ef3d9f26e",
+		"name": "Sci-Fi"
+	}, {
+		"id": "b92ef010-5e4c-4fd0-99d6-41b6456272cd",
+		"name": "Fantasy"
+	}],
+	"title": "Star Wars: Episode IV - A New Hope",
+	"description": "The Imperial Forces, under orders from cruel Darth Vader, hold Princess Leia hostage in their efforts to quell the rebellion against the Galactic Empire. Luke Skywalker and Han Solo, captain of the Millennium Falcon, work together with the companionable droid duo R2-D2 and C-3PO to rescue the beautiful princess, help the Rebel Alliance and restore freedom and justice to the Galaxy.",
+	"director": ["George Lucas"],
+	"actors_names": ["Carrie Fisher", "Harrison Ford", "Mark Hamill", "Peter Cushing"],
+	"writers_names": ["George Lucas"],
 	"actors": [{
-		"id": "0cce8da2-8839-4a78-a878-45f5252588c9",
-		"full_name": "Gilby Clarke"
+		"id": "26e83050-29ef-4163-a99d-b546cac208f8",
+		"full_name": "Mark Hamill"
 	}, {
-		"id": "1fe46055-fceb-4714-90be-5c3a8728d020",
-		"full_name": "Barbara Church"
+		"id": "5b4bf1bc-3397-4e83-9b17-8b10c6544ed1",
+		"full_name": "Harrison Ford"
 	}, {
-		"id": "89734888-0254-4040-b87c-30e2cb144d0d",
-		"full_name": "Bernard Baur"
+		"id": "b5d2b63a-ed1f-4e46-8320-cf52a32be358",
+		"full_name": "Carrie Fisher"
 	}, {
-		"id": "8aee78d1-87f4-4269-bb10-3d58ab009c2c",
-		"full_name": "Steven Adler"
+		"id": "e039eedf-4daf-452a-bf92-a0085c68e156",
+		"full_name": "Peter Cushing"
 	}],
 	"writers": [{
-		"id": "37c36461-9a0d-4fd9-b257-fae0b2b6e8ad",
-		"full_name": "Angela Turner"
+		"id": "a5a8f573-3cee-4ccc-8a2b-91cb9f55250a",
+		"full_name": "George Lucas"
 	}]
 }
