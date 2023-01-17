@@ -1,32 +1,32 @@
 import json
 import logging
 from contextlib import contextmanager
+from dataclasses import dataclass
 from time import sleep
+import asyncio
 
 import backoff
 import psycopg2
+from backoff_handlers import (elastic_conn_backoff_hdlr,
+                              elastic_load_data_backoff_hdlr,
+                              pg_conn_backoff_hdlr, pg_conn_success_hdlr,
+                              pg_getdata_backoff_hdlr, pg_getdata_success_hdlr)
 from elasticsearch import Elasticsearch, helpers
+from indices import genre_index, movies_index, person_index
+from models import Film, Genre, Person
+from psycopg2.extensions import connection as PG_connection
 from psycopg2.extras import DictCursor
-from queries import query_film_work
+from pydantic import BaseModel
+from queries import query_film_work, query_genres, query_persons, new_film_query
 from redis import Redis
-from settings import dsl, ELASTIC_HOST, ELASTIC_PORT,\
-    REDIS_HOST, REDIS_PORT, SLEEP_TIME
+from settings import ELASTIC_HOST, ELASTIC_PORT, REDIS_HOST, SLEEP_TIME, dsl
 from state import RedisStorage, State
+from typing import List, Union
 
 logging.basicConfig(
-    filename='etl.log',
     level=logging.INFO,
     format='%(asctime)s:%(levelname)s:%(message)s'
 )
-
-
-def pg_conn_backoff_hdlr(details):
-    logging.info("\t\n ==> Backing off {wait:0.1f} seconds after {tries} tries "
-                 "connection to PostgreSQL".format(**details))
-
-
-def pg_conn_success_hdlr(details):
-    logging.info("==> Successfully connected to PostgreSQL")
 
 
 @backoff.on_exception(
@@ -47,68 +47,10 @@ def connect_db(params):
 def pg_context(params: dict):
     """Connection to db PostgreSQL."""
     conn = connect_db(params)
-    cursor = conn.cursor()
-    yield cursor
-    cursor.close()
+    # cursor = conn.cursor()
+    yield conn
+    # cursor.close()
     conn.close()
-
-
-def pg_getdata_backoff_hdlr(details):
-    logging.info(
-        "\t\n ==> Can't execute query PostgreSQL."
-        "Backing off {wait:0.1f} seconds after {tries} tries"
-        "Details: {args}".format(**details))
-
-
-def pg_getdata_success_hdlr(details):
-    logging.info("==> Query executed successfully to PostgreSQL.")
-
-
-@backoff.on_exception(
-    wait_gen=backoff.expo,
-    exception=psycopg2.Error,
-    on_backoff=pg_getdata_backoff_hdlr,
-    on_success=pg_getdata_success_hdlr,
-    max_tries=10
-)
-def get_data_from_pg(
-    cursor: DictCursor,
-    query: str,
-    last_md_date: str = '1970-01-01',
-    batch_size: int = 100
-) -> list:
-    """
-    Returns list of rows in dictionary format from database.
-    """
-    cursor.execute(query.format(
-        last_md_date=last_md_date, batch_size=batch_size))
-    return [dict(row) for row in cursor.fetchall()]
-
-
-def elastic_load_data_backoff_hdlr(details):
-    logging.info(
-        "\t\n ==> Can't load data to Elastic query PostgreSQL. "
-        "Backing off {wait:0.1f} seconds after {tries} tries "
-        "Details: {args}".format(**details))
-
-
-@backoff.on_exception(
-    wait_gen=backoff.expo,
-    exception=Exception,
-    on_backoff=elastic_load_data_backoff_hdlr,
-    max_tries=10
-)
-def load_data_to_elastic(elastic_client: Elasticsearch,
-                         transformed_data: list):
-    """Loads list of records in Elasticsearch"""
-    helpers.bulk(elastic_client, transformed_data)
-
-
-def elastic_conn_backoff_hdlr(details):
-    logging.info(
-        "\t\n ==> Elastic connection Error. "
-        "Backing off {wait:0.1f} seconds after {tries} tries "
-        "Details: {args}".format(**details))
 
 
 @backoff.on_exception(
@@ -117,57 +59,128 @@ def elastic_conn_backoff_hdlr(details):
     on_backoff=elastic_conn_backoff_hdlr,
     max_tries=10
 )
-def create_elastic():
-    with open("index_schema.json", encoding="utf-8") as file:
-        mapping = json.load(file)
+def create_elastic_connection():
     es = Elasticsearch(f'http://{ELASTIC_HOST}:{ELASTIC_PORT}')
-    try:
-        es.indices.create(index="movies", **mapping)
-    except Exception as exc:
-        logging.info(f"Index insertion error -> {exc}")
     if not es.ping():
         raise Exception("Elastic server is not available")
     return es
 
 
-def transform_data(rows: list):
-    """Transform data for uploading to Elasticsearch."""
-    for row in rows:
-        del row["modified"]
+@dataclass
+class PostgresExtractor:
+    db_cursor: DictCursor
 
-    return [
-        {
-            "_index": "movies",
-            "_id": row["id"],
-            "_source": row
-        } for row in rows
-    ]
+    def extract_batch_from_database(self, query: str, fetch_size: int = 100):
+        self.db_cursor.execute(query)
+        rows = self.db_cursor.fetchmany(fetch_size)
+        while rows:
+            yield rows
+            rows = self.db_cursor.fetchmany(fetch_size)
+
+
+@dataclass
+class ETLConfig:
+    query: str
+    index_schema: dict
+    state_key: str
+    elastic_index_name: str
+    related_model: Union[Film, Genre, Person]
+    batch_size: int = 100
+    limit_size: int = 5000
+
+
+ETL_CONFIGS = [
+    ETLConfig(new_film_query, movies_index, 'film_last_modified_date', 'movies', Film),
+    ETLConfig(query_genres, genre_index, 'genre_last_modified_date', 'genres', Genre),
+    ETLConfig(query_persons, person_index, 'person_last_modified_date', 'persons', Person)
+]
+
+
+class ElasticsearchLoader:
+    @staticmethod
+    def create_index(index_name: str, index_schema: dict, elastic_conn: Elasticsearch):
+        try:
+            elastic_conn.indices.create(index=index_name, **index_schema)
+        except Exception as exc:
+            logging.info(f'Index {index_name} insertion error -> {exc}')
+
+    @staticmethod
+    def load_data_to_elastic(elastic_conn: Elasticsearch, transformed_data: list):
+        """Loads list of records in Elasticsearch"""
+        helpers.bulk(elastic_conn, transformed_data)
+
+
+@dataclass
+class ETLHandler:
+    extractor: PostgresExtractor
+    loader: ElasticsearchLoader
+    config: ETLConfig
+    state_option: str = 'modified'
+
+    def transform_data(self, rows: list):
+        """Transform data for uploading to Elasticsearch."""
+        try:
+            return [
+                {
+                    "_index": self.config.elastic_index_name,
+                    "_id": row['id'],
+                    "_source": self.config.related_model(**row).json()
+                } for row in rows
+            ]
+        except Exception as exc:
+            logging.info(exc)
+            raise exc
+
+    def process(self, elastic_conn, state: State):
+        self.last_modified_date = state.get_state(key=self.config.state_key, default='1970-01-01')
+        formatted_query = self.config.query.format(
+            last_md_date=self.last_modified_date,
+            limit=self.config.limit_size)
+
+        for batch in self.extractor.extract_batch_from_database(query=formatted_query,
+                                                                fetch_size=self.config.batch_size):
+            if batch:
+                new_last_modified_date = batch[-1][self.state_option].isoformat()
+                transformed_data = self.transform_data(rows=batch)
+                try:
+                    self.loader.load_data_to_elastic(elastic_conn, transformed_data)
+                except Exception as exc:
+                    logging.error(exc)
+                else:
+                    state.set_state(self.config.state_key, new_last_modified_date)
+                    logging.info(f'\tExtracted {len(batch)} rows for {self.config.elastic_index_name}')
+                    logging.info(
+                        f'State "{self.config.state_key}" updated from {self.last_modified_date} to {new_last_modified_date}')
+
+        # else:
+        #     await asyncio.sleep(50)
+        #     logging.info(f'ETL for {self.config.elastic_index_name} stopped for 60 seconds')
 
 
 def main():
     """Main process"""
     logging.info('Start etl process')
+
     state = State(RedisStorage(Redis(host=REDIS_HOST)))
-    elastic = create_elastic()
-    with pg_context(dsl) as pg_cursor:
+    # для отладки
+    # state.storage.clear_cache()
+    # ----
+    elastic = create_elastic_connection()
+    with pg_context(dsl) as pg_conn:
+        etl_handlers = [
+            ETLHandler(PostgresExtractor(pg_conn.cursor()), ElasticsearchLoader, config) for config in ETL_CONFIGS
+        ]
+
+        for etl_handler in etl_handlers:
+            etl_handler.loader.create_index(
+                index_name=etl_handler.config.elastic_index_name,
+                index_schema=etl_handler.config.index_schema,
+                elastic_conn=elastic)
+
         while True:
-            last_modified_date = state.get_state('last_modified_date')
-            last_modified_date = (
-                last_modified_date if last_modified_date
-                else '1970-01-01')
-
-            data = get_data_from_pg(cursor=pg_cursor,
-                                    query=query_film_work,
-                                    last_md_date=last_modified_date,
-                                    batch_size=100)
-
-            if data:
-                last_modified_date = data[-1]['modified'].isoformat()
-                transformed_data = transform_data(data)
-                load_data_to_elastic(elastic_client=elastic,
-                                     transformed_data=transformed_data)
-                state.set_state('last_modified_date', last_modified_date)
-            sleep(SLEEP_TIME)
+            for etl_handler in etl_handlers:
+                etl_handler.process(elastic_conn=elastic, state=state)
+                # await etl_handler.process(elastic_conn=elastic, state=state)
 
 
 if __name__ == '__main__':
