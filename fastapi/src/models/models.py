@@ -14,7 +14,7 @@ def orjson_dumps(v, *, default):
 
 
 class IdMixin(BaseModel):
-    id: UUID
+    id: str
 
     class Config:
         # Заменяем стандартную работу с json на более быструю
@@ -34,7 +34,7 @@ class Genre(IdMixin):
 
 class Film(IdMixin):
     title: str
-    description: str
+    description: str = ''
     creation_date: date = None
     imdb_rating: Optional[float] = None
     genres: List[Genre] = []
