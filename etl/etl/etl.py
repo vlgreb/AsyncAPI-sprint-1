@@ -1,27 +1,21 @@
-import json
+import datetime
 import logging
 from contextlib import contextmanager
 from dataclasses import dataclass
 from time import sleep
-import asyncio
 
 import backoff
 import psycopg2
-from backoff_handlers import (elastic_conn_backoff_hdlr,
-                              elastic_load_data_backoff_hdlr,
-                              pg_conn_backoff_hdlr, pg_conn_success_hdlr,
-                              pg_getdata_backoff_hdlr, pg_getdata_success_hdlr)
+from backoff_handlers import (elastic_conn_backoff_hdlr, pg_conn_backoff_hdlr, pg_conn_success_hdlr)
 from elasticsearch import Elasticsearch, helpers
 from indices import genre_index, movies_index, person_index
 from models import Film, Genre, Person
-from psycopg2.extensions import connection as PG_connection
 from psycopg2.extras import DictCursor
-from pydantic import BaseModel
-from queries import query_film_work, query_genres, query_persons, new_film_query
+from queries import query_genres, query_persons, new_film_query
 from redis import Redis
-from settings import ELASTIC_HOST, ELASTIC_PORT, REDIS_HOST, SLEEP_TIME, dsl
+from settings import ELASTIC_HOST, ELASTIC_PORT, REDIS_HOST, dsl
 from state import RedisStorage, State
-from typing import List, Union
+from typing import Union
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,6 +110,7 @@ class ETLHandler:
     loader: ElasticsearchLoader
     config: ETLConfig
     state_option: str = 'modified'
+    last_modified_date = datetime.date
 
     def transform_data(self, rows: list):
         """Transform data for uploading to Elasticsearch."""
@@ -153,8 +148,10 @@ class ETLHandler:
                         f'State "{self.config.state_key}" updated from {self.last_modified_date} to {new_last_modified_date}')
 
         # else:
-        #     await asyncio.sleep(50)
-        #     logging.info(f'ETL for {self.config.elastic_index_name} stopped for 60 seconds')
+        # TODO: впилить асинхронный time.sleep
+        # await asyncio.sleep(50)
+        sleep(0.5)
+        # logging.info(f'ETL for {self.config.elastic_index_name} stopped for 60 seconds')
 
 
 def main():
@@ -168,7 +165,7 @@ def main():
     elastic = create_elastic_connection()
     with pg_context(dsl) as pg_conn:
         etl_handlers = [
-            ETLHandler(PostgresExtractor(pg_conn.cursor()), ElasticsearchLoader, config) for config in ETL_CONFIGS
+            ETLHandler(PostgresExtractor(pg_conn.cursor()), ElasticsearchLoader(), config) for config in ETL_CONFIGS
         ]
 
         for etl_handler in etl_handlers:

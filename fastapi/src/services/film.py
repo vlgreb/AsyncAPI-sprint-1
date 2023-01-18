@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from typing import Optional
 
@@ -34,8 +35,10 @@ class FilmService:
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
-            doc = await self.elastic.get('movies', film_id)
+            doc = await self.elastic.get('movies', film_id, doc_type='_doc')
+            logging.info('[FilmService] from elastic by id')
         except NotFoundError:
+            logging.info("[FilmService] can't find in elastic by id")
             return None
         return Film(**doc['_source'])
 
@@ -46,6 +49,7 @@ class FilmService:
         if not data:
             return None
 
+        logging.info('[FilmService] from cache by id')
         # pydantic предоставляет удобное API для создания объекта моделей из json
         film = Film.parse_raw(data)
         return film
@@ -55,7 +59,20 @@ class FilmService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
+        logging.info('[FilmService] write to cache by id')
         await self.redis.set(film.id, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
+
+    async def get_films(self):
+        try:
+            data = await self.elastic.search(index='movies')
+            logging.info('[FilmService] from elastic')
+        except NotFoundError:
+            logging.info("[FilmService] can't find in elastic")
+            return None
+
+        films = [Film(**d['_source']) for d in data['hits']['hits']]
+        logging.info(f"[FilmService] {films}")
+        return films
 
 
 @lru_cache()
