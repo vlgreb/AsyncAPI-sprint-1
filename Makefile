@@ -2,7 +2,7 @@ up:
 	make build
 	make start
 	make admin-up
-	#make start-load-data-to-elastic
+	make start-load-data-to-elastic
 
 build:
 	docker-compose build --no-cache
@@ -32,7 +32,7 @@ admin-up:
 	make superuser
 
 start-load-data-to-elastic:
-	docker-compose exec -d etl sh -c "python etl.py"
+	docker-compose exec etl sh -c "python etl.py"
 
 stop:
 	docker-compose stop
