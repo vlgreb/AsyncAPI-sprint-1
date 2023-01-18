@@ -34,7 +34,7 @@ class Genre(IdMixin):
 
 class Film(IdMixin):
     title: str
-    description: str = ''
+    description: str = None
     creation_date: date = None
     imdb_rating: Optional[float] = None
     genres: List[Genre] = []
