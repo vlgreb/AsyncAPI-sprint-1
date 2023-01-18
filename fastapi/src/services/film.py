@@ -63,14 +63,34 @@ class FilmService:
         await self.redis.set(film.id, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
 
     async def get_films(self):
+
         try:
-            data = await self.elastic.search(index='movies')
+
+            data = await self.elastic.search(index='movies', scroll="2m", size=100)
+            sid = data['_scroll_id']
+            scroll_size = len(data['hits']['hits'])
+
+            results = data['hits']['hits']
+
+            while scroll_size > 0:
+
+                data = await self.elastic.scroll(scroll_id=sid, scroll='2m')
+
+                sid = data['_scroll_id']
+
+                scroll_size = len(data['hits']['hits'])
+
+                results += data['hits']['hits']
+
+            await self.elastic.clear_scroll(scroll_id=sid)
+
             logging.info('[FilmService] from elastic')
+
         except NotFoundError:
             logging.info("[FilmService] can't find in elastic")
             return None
 
-        films = [Film(**d['_source']) for d in data['hits']['hits']]
+        films = [Film(**item['_source']) for item in results]
         logging.info(f"[FilmService] {films}")
         return films
 

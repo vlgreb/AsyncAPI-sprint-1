@@ -33,7 +33,7 @@ async def shutdown():
     await elastic.es.close()
 
 # Добавляем пагинацию к app
-# add_pagination(app)
+add_pagination(app)
 
 # Подключаем роутер к серверу, указав префикс /v1/films
 # Теги указываем для удобства навигации по документации
