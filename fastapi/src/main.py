@@ -10,7 +10,6 @@ from api.v1 import films
 from core import config
 from core.logger import LOGGING
 from db import elastic, redis
-from fastapi_pagination import add_pagination
 
 app = FastAPI(
     title=config.PROJECT_NAME,
@@ -32,8 +31,6 @@ async def shutdown():
     await redis.redis.wait_closed()
     await elastic.es.close()
 
-# Добавляем пагинацию к app
-add_pagination(app)
 
 # Подключаем роутер к серверу, указав префикс /v1/films
 # Теги указываем для удобства навигации по документации
@@ -44,4 +41,5 @@ if __name__ == '__main__':
         'main:app',
         host='0.0.0.0',
         port=8000,
+        reload=True
     )

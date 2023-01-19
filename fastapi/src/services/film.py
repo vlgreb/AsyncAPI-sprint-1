@@ -62,27 +62,19 @@ class FilmService:
         logging.info('[FilmService] write to cache by id')
         await self.redis.set(film.id, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
 
-    async def get_films(self):
+    async def get_films(self, page: int, size: int):
 
         try:
 
-            data = await self.elastic.search(index='movies', scroll="2m", size=100)
-            sid = data['_scroll_id']
-            scroll_size = len(data['hits']['hits'])
+            body = {
+                "from": (page - 1) * size,
+                "size": size,
+                "sort": [{"imdb_rating": {"order": "desc"}}]
+            }
+
+            data = await self.elastic.search(index='movies', body=body)
 
             results = data['hits']['hits']
-
-            while scroll_size > 0:
-
-                data = await self.elastic.scroll(scroll_id=sid, scroll='2m')
-
-                sid = data['_scroll_id']
-
-                scroll_size = len(data['hits']['hits'])
-
-                results += data['hits']['hits']
-
-            await self.elastic.clear_scroll(scroll_id=sid)
 
             logging.info('[FilmService] from elastic')
 

@@ -2,8 +2,7 @@ import logging
 from http import HTTPStatus
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi_pagination import Page, paginate
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from services.film import FilmService, get_film_service
@@ -36,11 +35,12 @@ async def film_details(film_id: str, film_service: FilmService = Depends(get_fil
     return Film(id=film.id, title=film.title)
 
 
-@router.get('', response_model=Page[Film])
-async def film_list(film_service: FilmService = Depends(get_film_service)):
-    films = await film_service.get_films()
+@router.get('')
+async def film_list(film_service: FilmService = Depends(get_film_service),
+                    page: int = Query(...), size: int = Query(...)):
+    films = await film_service.get_films(page=page, size=size)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
     # Возвращаем список фильмов
-    return paginate(films)
+    return films
