@@ -1,9 +1,8 @@
 import logging
 from http import HTTPStatus
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi_pagination import Page, paginate
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from services.film import FilmService, get_film_service
@@ -14,34 +13,42 @@ router = APIRouter()
 class Film(BaseModel):
     id: str
     title: str
+    imdb_rating: Optional[float]
 
 
-# Внедряем FilmService с помощью Depends(get_film_service)
-@router.get('/{film_id}', response_model=Film)
+@router.get('/{film_id}',
+            response_model=Film,
+            summary='Информация о фильме по ID',
+            description='Данный endpoint предоставляет полную информацию о фильме по ID',
+            response_description='ID, название, описание, жанры, рейтинг, список участников кинопроизведения',
+            tags=['Фильмы']
+            )
 async def film_details(film_id: str, film_service: FilmService = Depends(get_film_service)) -> Film:
     film = await film_service.get_by_id(film_id)
     if not film:
-        # Если фильм не найден, отдаём 404 статус
-        # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum
-        # Такой код будет более поддерживаемым
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='film not found')
 
-    # Перекладываем данные из models.Film в Film
-    # Обратите внимание, что у модели бизнес-логики есть поле description
-        # Которое отсутствует в модели ответа API.
-        # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
-        # вы бы предоставляли клиентам данные, которые им не нужны
-        # и, возможно, данные, которые опасно возвращать
     return Film(id=film.id, title=film.title)
 
 
-# @router.get('', response_model=Page[Film])
-@router.get('')
-async def film_list(film_service: FilmService = Depends(get_film_service)):
-    films = await film_service.get_films()
+sort_regex = "^(asc|desc)$"
+
+
+@router.get('',
+            response_model=List[Film],
+            summary='Список фильмов',
+            description='Список фильмов с пагинацией, фильтрацией по жанрам и сортировкой по году или рейтингу',
+            response_description='Список фильмов с id, названием и рейтингом',
+            tags=['Фильмы']
+            )
+async def film_list(film_service: FilmService = Depends(get_film_service),
+                    page: int = Query(default=1, alias="page_number", ge=1),
+                    size: int = Query(default=25, alias="page_size", ge=1, le=100),
+                    sort_imdb: Optional[str] = Query(default=None, regex=sort_regex, alias='sort_by_rating'),
+                    sort_year: Optional[str] = Query(default=None, regex=sort_regex, alias='sort_by_year')
+                    ):
+    films = await film_service.get_films(page=page, size=size)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
-    # Возвращаем список фильмов
-    # return paginate(films)
-    return films
+    return [Film(id=film.id, title=film.title, imdb_rating=film.imdb_rating) for film in films]
