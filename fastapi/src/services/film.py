@@ -1,5 +1,7 @@
+import json
 import logging
 from functools import lru_cache
+from hashlib import md5
 from typing import Optional
 
 from aioredis import Redis
@@ -52,26 +54,61 @@ class FilmService:
 
     async def get_films(self, page: int, size: int):
 
+        body = {
+            "from": (page - 1) * size,
+            "size": size,
+            "sort": [{"imdb_rating": {"order": "desc"}}]
+        }
+
+        redis_key = await self._get_hash(str(body))
+
+        films = await self._get_data_from_cache(key=redis_key, redis_range=size)
+
+        if not films:
+
+            films = await self._get_data_from_elastic(index='movies', body=body)
+
+            if not films:
+                return None
+
+            cache_data = [film.json() for film in films]
+
+            logging.info(films)
+
+            await self._put_data_to_cache(data=cache_data, key=redis_key)
+
+        else:
+            films = [Film.parse_raw(film) for film in films]
+            logging.info('[FilmService] film_data from cache')
+
+        return films
+
+    @staticmethod
+    async def _get_hash(kwargs):
+        return str(hash(kwargs))
+
+    async def _get_data_from_cache(self, key: str, redis_range: int):
+
+        data = await self.redis.lrange(key, 0, redis_range)
+
+        return data
+
+    async def _put_data_to_cache(self, data: list, key: str):
+
+        logging.info('[FilmService] write film_data to cache')
+        await self.redis.rpush(key, *data)
+
+    async def _get_data_from_elastic(self, index: str, body: dict):
+
         try:
+            data = await self.elastic.search(index=index, body=body)
+            films = [Film(**item['_source']) for item in data['hits']['hits']]
 
-            body = {
-                "from": (page - 1) * size,
-                "size": size,
-                "sort": [{"imdb_rating": {"order": "desc"}}]
-            }
-
-            data = await self.elastic.search(index='movies', body=body)
-
-            results = data['hits']['hits']
-
-            logging.info('[FilmService] from elastic')
-
+            logging.info('[FilmService] get film_data from elastic')
         except NotFoundError:
-            logging.info("[FilmService] can't find in elastic")
+            logging.info("[FilmService] can't find film_data in elastic")
             return None
 
-        films = [Film(**item['_source']) for item in results]
-        logging.info(f"[FilmService] {films}")
         return films
 
 
