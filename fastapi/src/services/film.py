@@ -1,7 +1,6 @@
-import json
 import logging
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, List
 
 from aioredis import Redis
 from db.elastic import get_elastic
@@ -20,6 +19,11 @@ class FilmService:
         self.elastic = elastic
 
     async def get_by_id(self, film_id: str) -> Optional[Film]:
+        """
+        Метод возвращает фильм по ID
+        :param film_id:
+        :return: Film
+        """
         film = await self._film_from_cache(film_id)
         if not film:
             film = await self._get_film_from_elastic(film_id)
@@ -51,13 +55,38 @@ class FilmService:
         logging.info('[FilmService] write to cache by id')
         await self.redis.set(film.id, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
 
-    async def get_films(self, page: int, size: int):
+    async def get_films(self, page: int, size: int, genre_id: Optional[str]) -> Optional[List[Film]]:
+        """
+        Метод возвращает все фильмы по параметрам и фильтрации
+        :param page: номер страницы
+        :param size: количество фильмов на странице
+        :param genre_id: ID жанра для фильтрации
+        :return: list[Film]
+        """
 
         body = {
             "from": (page - 1) * size,
             "size": size,
             "sort": [{"imdb_rating": {"order": "desc"}}]
         }
+
+        if genre_id:
+            body["query"] = {
+                "nested": {
+                    "path": "genres",
+                    "query": {
+                        "bool": {
+                            "must": [{
+                                "term": {
+                                    "genres.id": {
+                                        "value": genre_id
+                                    }
+                                }
+                            }]
+                        }
+                    }
+                }
+            }
 
         redis_key = await self._get_hash(str(body))
 
