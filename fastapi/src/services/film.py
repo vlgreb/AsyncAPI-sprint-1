@@ -76,19 +76,17 @@ class FilmService:
                     "path": "genres",
                     "query": {
                         "bool": {
-                            "must": [
-                                {
-                                    "term": {
-                                        "genres.id": {
-                                            "value": genre_id
-                                            }
-                                        }
+                            "must": [{
+                                "term": {
+                                    "genres.id": {
+                                        "value": genre_id
                                     }
-                            ]
+                                }
+                            }]
                         }
                     }
                 }
-              }
+            }
 
         redis_key = await self._get_hash(str(body))
 
