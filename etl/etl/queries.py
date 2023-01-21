@@ -141,16 +141,6 @@ SELECT
         '{{}}'
    ) AS director,
    COALESCE (
-        array_agg(DISTINCT p.full_name) 
-            FILTER (WHERE pfw.role = 'actor' AND p.full_name IS NOT NULL), 
-        '{{}}'
-   ) AS actors_names,
-   COALESCE (
-        array_agg(DISTINCT p.full_name) 
-            FILTER (WHERE pfw.role = 'writer' AND p.full_name IS NOT NULL), 
-        '{{}}'
-   ) AS writers_names,
-   COALESCE (
        json_agg(
            DISTINCT jsonb_build_object(
                'id', p.id,

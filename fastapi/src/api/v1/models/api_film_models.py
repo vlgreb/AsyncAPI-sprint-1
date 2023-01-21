@@ -17,7 +17,5 @@ class FilmFull(FilmBase):
     creation_date: date = None
     genres: List[Genre] = []
     actors: List[PersonBase] = []
-    actors_names: List[str] = []
     directors: List[PersonBase] = []
     writers: List[PersonBase] = []
-    writers_names: List[str] = []

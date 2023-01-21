@@ -37,7 +37,5 @@ class Film(IdMixin):
     imdb_rating: Optional[float] = None
     genres: List[Genre] = []
     actors: List[PersonBase] = []
-    actors_names: List[str] = []
     directors: List[PersonBase] = []
     writers: List[PersonBase] = []
-    writers_names: List[str] = []

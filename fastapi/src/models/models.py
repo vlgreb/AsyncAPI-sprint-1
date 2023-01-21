@@ -36,7 +36,5 @@ class Film(Base):
     imdb_rating: Optional[float] = None
     genres: List[Genre] = []
     actors: List[Person] = []
-    actors_names: List[str] = []
     directors: List[Person] = []
     writers: List[Person] = []
-    writers_names: List[str] = []
