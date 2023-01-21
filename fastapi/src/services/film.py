@@ -86,8 +86,7 @@ class FilmService:
                                     }
                             ]
                         }
-                    },
-                    "score_mode": "avg"
+                    }
                 }
               }
 
