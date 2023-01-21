@@ -80,6 +80,7 @@ class FilmService(BaseService):
         :param query: запрос
         :param page: номер страницы
         :param size: количество фильмов на странице
+        :param size: количество фильмов на странице
         :return: list[Film]
         """
         body = {
@@ -104,7 +105,7 @@ class FilmService(BaseService):
         :param body:
         :return:
         """
-        redis_key = await self._get_hash(str(body))
+        redis_key = self._get_hash(str(body))
 
         films = await self._get_list_of_data_from_cache(key=redis_key, redis_range=size)
 
