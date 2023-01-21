@@ -5,7 +5,7 @@ import orjson
 from aioredis import Redis
 from elasticsearch import AsyncElasticsearch, NotFoundError
 
-FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5
+CACHE_EXPIRE_IN_SECONDS = 60 * 5
 
 
 class BaseService:
@@ -54,7 +54,7 @@ class BaseService:
         :return: None
         """
         logging.info(f'[{self.service_name}] write to cache by id')
-        await self.redis.set(doc_id, orjson.dumps(doc).decode(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(doc_id, orjson.dumps(doc).decode(), expire=CACHE_EXPIRE_IN_SECONDS)
 
     async def _get_from_elastic(self, doc_id: str) -> Optional[dict]:
         """
@@ -91,5 +91,5 @@ class BaseService:
         await self.redis.rpush(key, *data)
 
     @staticmethod
-    async def _get_hash(kwargs):
+    def _get_hash(kwargs):
         return str(hash(kwargs))

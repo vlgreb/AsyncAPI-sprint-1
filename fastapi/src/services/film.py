@@ -26,7 +26,7 @@ class FilmService(BaseService):
         film = await self.get_by_id(doc_id)
         return Film(**film)
 
-    async def get_films(self, page: int, size: int, genre_id: Optional[str]) -> Optional[List[Film]]:
+    async def get_list_films(self, page: int, size: int, genre_id: Optional[str]) -> Optional[List[Film]]:
         """
         Метод возвращает все фильмы по параметрам и фильтрации
         :param page: номер страницы
@@ -59,7 +59,52 @@ class FilmService(BaseService):
                 }
             }
 
-        redis_key = await self._get_hash(str(body))
+        return await self._get_films(body, size)
+
+    async def _get_data_from_elastic(self, index: str, body: dict):
+
+        try:
+            data = await self.elastic.search(index=index, body=body)
+            films = [Film(**item['_source']) for item in data['hits']['hits']]
+
+            logging.info('[FilmService] get film_data from elastic')
+        except NotFoundError:
+            logging.info("[FilmService] can't find film_data in elastic")
+            return None
+
+        return films
+
+    async def search_films(self, query: str, page: int, size: int) -> Optional[List[Film]]:
+        """
+        Полнотекстовый поиск по query
+        :param query: запрос
+        :param page: номер страницы
+        :param size: количество фильмов на странице
+        :return: list[Film]
+        """
+        body = {
+            "query": {
+                "multi_match": {
+                    "query": query,
+                    "fields": [
+                        "title^2",
+                        "description"
+                    ]
+                }
+            },
+            "from": (page - 1) * size,
+            "size": size
+        }
+
+        return await self._get_films(body, size)
+
+    async def _get_films(self, body: dict, size: int) -> Optional[List[Film]]:
+        """
+        Метод достает данные из кэша или эластика
+        :param body:
+        :return:
+        """
+        redis_key = self._get_hash(str(body))
 
         films = await self._get_list_of_data_from_cache(key=redis_key, redis_range=size)
 
@@ -80,23 +125,9 @@ class FilmService(BaseService):
 
         return films
 
-    async def _get_data_from_elastic(self, index: str, body: dict):
-
-        try:
-            data = await self.elastic.search(index=index, body=body)
-            films = [Film(**item['_source']) for item in data['hits']['hits']]
-
-            logging.info('[FilmService] get film_data from elastic')
-        except NotFoundError:
-            logging.info("[FilmService] can't find film_data in elastic")
-            return None
-
-        return films
-
 
 @lru_cache()
-def get_film_service(
-        redis: Redis = Depends(get_redis),
-        elastic: AsyncElasticsearch = Depends(get_elastic),
-) -> FilmService:
+def get_film_service(redis: Redis = Depends(get_redis),
+                     elastic: AsyncElasticsearch = Depends(get_elastic), ) -> FilmService:
+
     return FilmService(redis, elastic)
