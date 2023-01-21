@@ -104,8 +104,6 @@ movies_index = {
             },
             "title": TEXT_KEYWORD_SETTINGS,
             "description": TEXT_SETTINGS,
-            "actors_names": TEXT_SETTINGS,
-            "writers_names": TEXT_SETTINGS,
             "actors": PERSONS_SETTINGS,
             "writers": PERSONS_SETTINGS,
             "directors": PERSONS_SETTINGS

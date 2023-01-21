@@ -41,9 +41,7 @@ def connect_db(params):
 def pg_context(params: dict):
     """Connection to db PostgreSQL."""
     conn = connect_db(params)
-    # cursor = conn.cursor()
     yield conn
-    # cursor.close()
     conn.close()
 
 
@@ -145,7 +143,8 @@ class ETLHandler:
                     state.set_state(self.config.state_key, new_last_modified_date)
                     logging.info(f'\tExtracted {len(batch)} rows for {self.config.elastic_index_name}')
                     logging.info(
-                        f'State "{self.config.state_key}" updated from {self.last_modified_date} to {new_last_modified_date}')
+                        f'State "{self.config.state_key}" updated from {self.last_modified_date}'
+                        f' to {new_last_modified_date}')
 
         # else:
         # TODO: впилить асинхронный time.sleep
@@ -159,9 +158,6 @@ def main():
     logging.info('Start etl process')
 
     state = State(RedisStorage(Redis(host=REDIS_HOST)))
-    # для отладки
-    # state.storage.clear_cache()
-    # ----
     elastic = create_elastic_connection()
     with pg_context(dsl) as pg_conn:
         etl_handlers = [
