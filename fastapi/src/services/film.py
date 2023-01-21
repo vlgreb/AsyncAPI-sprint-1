@@ -1,24 +1,26 @@
 import logging
-from typing import Optional, List
-
-from dataclasses import dataclass
-from fastapi import Depends
 from functools import lru_cache
+from typing import List, Optional
+
 from aioredis import Redis
-from db.redis import get_redis
 from db.elastic import get_elastic
+from db.redis import get_redis
 from elasticsearch import AsyncElasticsearch, NotFoundError
 from models.models import Film
 from services.base_service import BaseService
 
+from fastapi import Depends
 
-@dataclass
+
 class FilmService(BaseService):
     """
     Класс позволяет взаимодействовать с ElasticSearch и Redis для поиска информации по фильму, включая четкий и
     нечеткий (полнотекстовый) поиск.
     """
-    service_name: str = 'FilmService'
+    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
+        super().__init__(redis, elastic)
+        self.index_name = 'movies'
+        self.service_name = 'FilmService'
 
     async def get_film_by_id(self, doc_id: str) -> Optional[Film]:
         film = await self.get_by_id(doc_id)
@@ -70,8 +72,6 @@ class FilmService(BaseService):
 
             cache_data = [film.json() for film in films]
 
-            logging.info(films)
-
             await self._put_list_of_data_to_cache(data=cache_data, key=redis_key)
 
         else:
@@ -99,4 +99,4 @@ def get_film_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> FilmService:
-    return FilmService(redis, elastic, index_name='movies')
+    return FilmService(redis, elastic)

@@ -1,25 +1,23 @@
 import logging
+from typing import Optional
+
 import orjson
-
-from dataclasses import dataclass
-
 from aioredis import Redis
 from elasticsearch import AsyncElasticsearch, NotFoundError
-from typing import Optional
 
 FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5
 
 
-@dataclass
 class BaseService:
     """
     Класс представляет базовый интерфейс для работы с ElasticSearch и Redis. Получение по id (или прочему ключу)
     документов и их кеширование.
     """
-    redis: Redis
-    elastic: AsyncElasticsearch
-    index_name: str = 'default_index_name'
-    service_name: str = 'base_service'
+    def __init__(self, redis: Redis, elastic: AsyncElasticsearch, index_name: str = '', service_name: str = 'base'):
+        self.redis = redis
+        self.elastic = elastic
+        self.index_name = index_name
+        self.service_name = service_name
 
     async def get_by_id(self, doc_id: str) -> Optional[dict]:
         """
