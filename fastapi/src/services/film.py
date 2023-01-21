@@ -1,16 +1,15 @@
 import json
 import logging
 from functools import lru_cache
-from hashlib import md5
 from typing import Optional
 
 from aioredis import Redis
-from elasticsearch import AsyncElasticsearch, NotFoundError
-from fastapi import Depends
-
 from db.elastic import get_elastic
 from db.redis import get_redis
+from elasticsearch import AsyncElasticsearch, NotFoundError
 from models.models import Film
+
+from fastapi import Depends
 
 FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5
 
@@ -32,7 +31,7 @@ class FilmService:
 
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
-            doc = await self.elastic.get('movies', film_id, doc_type='_doc')
+            doc = await self.elastic.get(index='movies', id=film_id)
             logging.info('[FilmService] from elastic by id')
         except NotFoundError:
             logging.info("[FilmService] can't find in elastic by id")
