@@ -93,8 +93,7 @@ class FilmService(BaseService):
                 }
             },
             "from": (page - 1) * size,
-            "size": size,
-            "sort": [{"imdb_rating": {"order": "desc"}}]
+            "size": size
         }
 
         return await self._get_films(body, size)
