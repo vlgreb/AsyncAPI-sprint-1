@@ -117,8 +117,6 @@ class FilmService(BaseService):
 
             cache_data = [film.json() for film in films]
 
-            logging.info(films)
-
             await self._put_list_of_data_to_cache(data=cache_data, key=redis_key)
 
         else:
