@@ -1,4 +1,3 @@
-import logging
 from http import HTTPStatus
 from typing import List, Optional
 
@@ -39,10 +38,18 @@ async def film_list(film_service: FilmService = Depends(get_film_service),
                     page: int = Query(default=1, alias="page_number", ge=1),
                     size: int = Query(default=25, alias="page_size", ge=1, le=100),
                     sort_imdb: Optional[str] = Query(default=None, regex=sort_regex, alias='sort_by_rating'),
-                    sort_year: Optional[str] = Query(default=None, regex=sort_regex, alias='sort_by_year')
-                    ):
-    films = await film_service.get_films(page=page, size=size)
+                    sort_year: Optional[str] = Query(default=None, regex=sort_regex, alias='sort_by_year'),
+                    genre_id: Optional[str] = Query(default=None, alias='filter[genre]'),
+                    ) -> List[FilmBase]:
+    # TODO: прокинуть параметры сортировки и реализовать
+    # TODO: переделать валидацию size на дискретные значения. например, 25, 50, 100
+    films = await film_service.get_films(page=page, size=size, genre_id=genre_id)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
     return [FilmBase(id=film.id, title=film.title, imdb_rating=film.imdb_rating) for film in films]
+
+
+@router.get('/search')
+async def film_search():
+    pass
