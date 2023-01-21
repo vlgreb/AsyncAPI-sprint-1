@@ -1,5 +1,5 @@
 up:
-	#make build
+	make build
 	make start
 	make admin-up
 	make start-load-data-to-elastic
