@@ -80,7 +80,6 @@ class FilmService(BaseService):
         :param query: запрос
         :param page: номер страницы
         :param size: количество фильмов на странице
-        :param size: количество фильмов на странице
         :return: list[Film]
         """
         body = {
