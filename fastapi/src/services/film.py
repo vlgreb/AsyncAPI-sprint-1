@@ -73,15 +73,21 @@ class FilmService:
         if genre_id:
             body["query"] = {
                 "nested": {
-                  "path": "genres",
-                  "query": {
-                    "bool": {
-                      "must": [
-                        {"match": {"genres.id": genre_id}}
-                      ]
-                    }
-                  },
-                  "score_mode": "avg"
+                    "path": "genres",
+                    "query": {
+                        "bool": {
+                            "must": [
+                                {
+                                    "term": {
+                                        "genres.id": {
+                                            "value": genre_id
+                                            }
+                                        }
+                                    }
+                            ]
+                        }
+                    },
+                    "score_mode": "avg"
                 }
               }
 
