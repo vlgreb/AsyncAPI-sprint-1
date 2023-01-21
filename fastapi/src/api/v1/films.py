@@ -1,3 +1,4 @@
+import logging
 from http import HTTPStatus
 from typing import List, Optional
 
@@ -7,6 +8,25 @@ from services.film import FilmService, get_film_service
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 router = APIRouter()
+
+
+@router.get('/search',
+            response_model=List[FilmBase],
+            summary='Список фильмов',
+            description='Поиск по фильмам по запросу',
+            response_description='Список фильмов с id, названием и рейтингом',
+            tags=['Фильмы']
+            )
+async def film_search(film_service: FilmService = Depends(get_film_service),
+                      page: int = Query(default=1, alias="page_number", ge=1),
+                      size: int = Query(default=25, alias="page_size", ge=1, le=100),
+                      query: Optional[str] = Query(..., alias='query'),
+                      ) -> List[FilmBase]:
+    films = await film_service.search_films(query=query, page=page, size=size)
+    if not films:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
+
+    return [FilmBase(**film.dict()) for film in films]
 
 
 @router.get('/{film_id}',
@@ -43,13 +63,9 @@ async def film_list(film_service: FilmService = Depends(get_film_service),
                     ) -> List[FilmBase]:
     # TODO: прокинуть параметры сортировки и реализовать
     # TODO: переделать валидацию size на дискретные значения. например, 25, 50, 100
-    films = await film_service.get_films(page=page, size=size, genre_id=genre_id)
+    films = await film_service.get_list_films(page=page, size=size, genre_id=genre_id)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
-    return [FilmBase(id=film.id, title=film.title, imdb_rating=film.imdb_rating) for film in films]
+    return [FilmBase(**film.dict()) for film in films]
 
-
-@router.get('/search')
-async def film_search():
-    pass
