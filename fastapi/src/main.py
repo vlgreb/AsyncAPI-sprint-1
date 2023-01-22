@@ -1,5 +1,3 @@
-import logging
-
 import aioredis
 import uvicorn
 from elasticsearch import AsyncElasticsearch
@@ -34,7 +32,7 @@ async def shutdown():
     await elastic.es.close()
 
 
-app.include_router(films.router, prefix='/api/v1/films')  # , tags=['films'])
+app.include_router(films.router, prefix='/api/v1/films')
 
 if __name__ == '__main__':
     uvicorn.run(
