@@ -33,3 +33,10 @@ def elastic_conn_backoff_hdlr(details):
         "\t\n ==> Elastic connection Error. "
         "Backing off {wait:0.1f} seconds after {tries} tries "
         "Details: {args}".format(**details))
+
+
+def redis_conn_backoff_hdlr(details):
+    logging.info(
+        "\t\n ==> Redis connection Error. "
+        "Backing off {wait:0.1f} seconds after {tries} tries "
+        "Details: {args}".format(**details))

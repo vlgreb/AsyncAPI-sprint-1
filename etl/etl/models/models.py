@@ -9,7 +9,7 @@ def orjson_dumps(v, *, default):
     return orjson.dumps(v, default=default).decode()
 
 
-class IdMixin(BaseModel):
+class Base(BaseModel):
     id: str
 
     class Config:
@@ -17,7 +17,7 @@ class IdMixin(BaseModel):
         json_dumps = orjson_dumps
 
 
-class PersonBase(IdMixin):
+class PersonBase(Base):
     full_name: str
 
 
@@ -26,11 +26,11 @@ class Person(PersonBase):
     film_ids: List[str] = []
 
 
-class Genre(IdMixin):
+class Genre(Base):
     name: str
 
 
-class Film(IdMixin):
+class Film(Base):
     title: str
     description: str = None
     creation_date: date = None
