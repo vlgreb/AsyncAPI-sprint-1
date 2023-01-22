@@ -1,21 +1,16 @@
-import datetime
+import asyncio
 import logging
-from contextlib import contextmanager
-from dataclasses import dataclass
-from time import sleep
 
-import backoff
+import elasticsearch
 import psycopg2
-from backoff_handlers import (elastic_conn_backoff_hdlr, pg_conn_backoff_hdlr, pg_conn_success_hdlr)
-from elasticsearch import Elasticsearch, helpers
-from indices import genre_index, movies_index, person_index
-from models import Film, Genre, Person
-from psycopg2.extras import DictCursor
-from queries import query_genres, query_persons, new_film_query
-from redis import Redis
-from settings import ELASTIC_HOST, ELASTIC_PORT, REDIS_HOST, dsl
-from state import RedisStorage, State
-from typing import Union
+from db.connection_handler import (PostgreConnError, connect_db,
+                                   create_elastic_connection,
+                                   create_redis_connection)
+from redis import exceptions as redis_exceptions
+from services.elastic_loader_service import create_indices
+from services.etl_handler_service import get_etl_handlers
+from services.state_service import RedisStorage, State
+from settings import ELASTIC_HOST, ELASTIC_PORT, ETL_CONFIGS, REDIS_HOST, dsl
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,158 +18,50 @@ logging.basicConfig(
 )
 
 
-@backoff.on_exception(
-    wait_gen=backoff.expo,
-    exception=psycopg2.Error,
-    max_tries=10,
-    on_backoff=pg_conn_backoff_hdlr,
-    on_success=pg_conn_success_hdlr
-)
-def connect_db(params):
-    return psycopg2.connect(
-        **params,
-        cursor_factory=DictCursor
-    )
-
-
-@contextmanager
-def pg_context(params: dict):
-    """Connection to db PostgreSQL."""
-    conn = connect_db(params)
-    yield conn
-    conn.close()
-
-
-@backoff.on_exception(
-    wait_gen=backoff.expo,
-    exception=Exception,
-    on_backoff=elastic_conn_backoff_hdlr,
-    max_tries=10
-)
-def create_elastic_connection():
-    es = Elasticsearch(f'http://{ELASTIC_HOST}:{ELASTIC_PORT}')
-    if not es.ping():
-        raise Exception("Elastic server is not available")
-    return es
-
-
-@dataclass
-class PostgresExtractor:
-    db_cursor: DictCursor
-
-    def extract_batch_from_database(self, query: str, fetch_size: int = 100):
-        self.db_cursor.execute(query)
-        rows = self.db_cursor.fetchmany(fetch_size)
-        while rows:
-            yield rows
-            rows = self.db_cursor.fetchmany(fetch_size)
-
-
-@dataclass
-class ETLConfig:
-    query: str
-    index_schema: dict
-    state_key: str
-    elastic_index_name: str
-    related_model: Union[Film, Genre, Person]
-    batch_size: int = 100
-    limit_size: int = 5000
-
-
-ETL_CONFIGS = [
-    ETLConfig(new_film_query, movies_index, 'film_last_modified_date', 'movies', Film),
-    ETLConfig(query_genres, genre_index, 'genre_last_modified_date', 'genres', Genre),
-    ETLConfig(query_persons, person_index, 'person_last_modified_date', 'persons', Person)
-]
-
-
-class ElasticsearchLoader:
-    @staticmethod
-    def create_index(index_name: str, index_schema: dict, elastic_conn: Elasticsearch):
-        try:
-            elastic_conn.indices.create(index=index_name, **index_schema)
-        except Exception as exc:
-            logging.info(f'Index {index_name} insertion error -> {exc}')
-
-    @staticmethod
-    def load_data_to_elastic(elastic_conn: Elasticsearch, transformed_data: list):
-        """Loads list of records in Elasticsearch"""
-        helpers.bulk(elastic_conn, transformed_data)
-
-
-@dataclass
-class ETLHandler:
-    extractor: PostgresExtractor
-    loader: ElasticsearchLoader
-    config: ETLConfig
-    state_option: str = 'modified'
-    last_modified_date = datetime.date
-
-    def transform_data(self, rows: list):
-        """Transform data for uploading to Elasticsearch."""
-        try:
-            return [
-                {
-                    "_index": self.config.elastic_index_name,
-                    "_id": row['id'],
-                    "_source": self.config.related_model(**row).json()
-                } for row in rows
-            ]
-        except Exception as exc:
-            logging.info(exc)
-            raise exc
-
-    def process(self, elastic_conn, state: State):
-        self.last_modified_date = state.get_state(key=self.config.state_key, default='1970-01-01')
-        formatted_query = self.config.query.format(
-            last_md_date=self.last_modified_date,
-            limit=self.config.limit_size)
-
-        for batch in self.extractor.extract_batch_from_database(query=formatted_query,
-                                                                fetch_size=self.config.batch_size):
-            if batch:
-                new_last_modified_date = batch[-1][self.state_option].isoformat()
-                transformed_data = self.transform_data(rows=batch)
-                try:
-                    self.loader.load_data_to_elastic(elastic_conn, transformed_data)
-                except Exception as exc:
-                    logging.error(exc)
-                else:
-                    state.set_state(self.config.state_key, new_last_modified_date)
-                    logging.info(f'\tExtracted {len(batch)} rows for {self.config.elastic_index_name}')
-                    logging.info(
-                        f'State "{self.config.state_key}" updated from {self.last_modified_date}'
-                        f' to {new_last_modified_date}')
-
-        # else:
-        # TODO: впилить асинхронный time.sleep
-        # await asyncio.sleep(50)
-        sleep(0.5)
-        # logging.info(f'ETL for {self.config.elastic_index_name} stopped for 60 seconds')
-
-
-def main():
+async def main():
     """Main process"""
     logging.info('Start etl process')
+    db_conn = None
+    while True:
 
-    state = State(RedisStorage(Redis(host=REDIS_HOST)))
-    elastic = create_elastic_connection()
-    with pg_context(dsl) as pg_conn:
-        etl_handlers = [
-            ETLHandler(PostgresExtractor(pg_conn.cursor()), ElasticsearchLoader(), config) for config in ETL_CONFIGS
-        ]
+        try:
+            state = State(RedisStorage(create_redis_connection(REDIS_HOST)))
+            elastic = create_elastic_connection(ELASTIC_HOST, ELASTIC_PORT)
+            db_conn = connect_db(dsl)
+            etl_handlers = get_etl_handlers(db_conn, ETL_CONFIGS)
+            create_indices(etl_handlers, elastic)
 
-        for etl_handler in etl_handlers:
-            etl_handler.loader.create_index(
-                index_name=etl_handler.config.elastic_index_name,
-                index_schema=etl_handler.config.index_schema,
-                elastic_conn=elastic)
+            while True:
 
-        while True:
-            for etl_handler in etl_handlers:
-                etl_handler.process(elastic_conn=elastic, state=state)
-                # await etl_handler.process(elastic_conn=elastic, state=state)
+                try:
+                    tasks = []
+                    for etl_handler in etl_handlers:
+                        tasks.append(etl_handler.process(elastic_conn=elastic, state=state))
+                    await asyncio.gather(*tasks)
+                    logging.info(f'ETL resume. Start scan for changes')
+
+                except PostgreConnError as db_error:
+                    logging.exception(f"Extraction failed. Database connection closed: \n\t {db_error}. "
+                                      f"****** Trying to reconnect... ******")
+                    db_conn.close()
+                    db_conn = connect_db(dsl)
+                    for etl_handler in etl_handlers:
+                        etl_handler.extractor.db_cursor = db_conn.cursor()
+
+                except elasticsearch.ConnectionError:
+                    logging.info("...Reconnect to elastic")
+                    elastic = create_elastic_connection()
+
+                except redis_exceptions.RedisError as redis_exc:
+                    logging.exception(f'Redis error occured:\n\t {redis_exc} ')
+                    state = State(RedisStorage(create_redis_connection()))
+
+        except (psycopg2.InterfaceError, psycopg2.OperationalError, psycopg2.ProgrammingError):
+            db_conn.close()
+
+        except Exception as exc:
+            logging.exception(f'!!! Something went wrong... \n\t {exc}')
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

@@ -1,4 +1,5 @@
 import abc
+from json.decoder import JSONDecodeError
 from typing import Any
 
 from redis import Redis
@@ -29,10 +30,9 @@ class RedisStorage(BaseStorage):
                   for key in self.redis_adapter.scan_iter()}
         return result
 
-    def clear_cache(self):
-        """Clear redis cache"""
-        for key in self.redis_adapter.scan_iter():
-            self.redis_adapter.delete(key)
+    def _clear_cache(self):
+        """Очистить кэш"""
+        self.redis_adapter.flushdb()
 
 
 class State:
@@ -54,7 +54,7 @@ class State:
         json_dict = self.storage.retrieve_state()
         try:
             return json_dict[key]
-        except Exception:
+        except (JSONDecodeError, KeyError):
             return default
 
 
