@@ -48,7 +48,7 @@ class ETLHandler:
         for batch in self.extractor.extract_batch_from_database(query=formatted_query,
                                                                 fetch_size=self.config.batch_size):
             if batch:
-
+                self.last_modified_date = state.get_state(key=self.config.state_key, default='1970-01-01')
                 new_last_modified_date = batch[-1][self.state_option].isoformat()
                 transformed_data = self.transform_data(rows=batch)
 

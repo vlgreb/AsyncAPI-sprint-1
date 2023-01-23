@@ -126,7 +126,7 @@ class BaseDataService:
         if not index_name:
             index_name = self.index_name
 
-        redis_key = self._get_hash(str(body))
+        redis_key = self._get_hash(f'{str(body)}{index_name}')
 
         data = await self._get_full_data_from_cache(key=redis_key, redis_range=size)
 

@@ -80,10 +80,6 @@ services:
       - "9200:9200"
     volumes:
       - elastic_volume_compose:/usr/share/elasticsearch/data
-#    depends_on:
-#      redis:
-#        condition: service_healthy
-
 
   kibana:
     image: kibana:8.5.3
