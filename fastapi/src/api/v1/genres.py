@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import List, Optional
+from typing import List
 
 from api.v1.models.api_genre_models import Genre
 from services.genre import GenreService, get_genre_service

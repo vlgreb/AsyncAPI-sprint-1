@@ -1,9 +1,8 @@
 from datetime import date
-from typing import Optional, List
+from typing import List, Optional
 from uuid import UUID
 
 import orjson
-
 from pydantic import BaseModel
 
 

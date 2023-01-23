@@ -5,8 +5,8 @@ from typing import List, Optional
 from aioredis import Redis
 from db.elastic import get_elastic
 from db.redis import get_redis
-from elasticsearch import AsyncElasticsearch, NotFoundError
-from models.models import Person, Film
+from elasticsearch import AsyncElasticsearch
+from models.models import Film, Person
 from services.base_service import BaseDataService
 
 from fastapi import Depends

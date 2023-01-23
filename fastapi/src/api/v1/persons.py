@@ -1,4 +1,3 @@
-import logging
 from http import HTTPStatus
 from typing import List, Optional
 
@@ -37,7 +36,8 @@ async def person_search(person_service: PersonService = Depends(get_person_servi
             response_description='ID, полное имя, роль',
             tags=['Персоны']
             )
-async def person_details(person_id: str, person_service: PersonService = Depends(get_person_service)) -> List[FilmBase]:
+async def films_with_person_details(person_id: str,
+                                    person_service: PersonService = Depends(get_person_service)) -> List[FilmBase]:
     films = await person_service.get_films_by_person(person_id)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='person not found')
