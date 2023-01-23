@@ -1,12 +1,11 @@
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
 from aioredis import Redis
-from elasticsearch import AsyncElasticsearch, NotFoundError
-
 from api.v1.models.api_film_models import FilmFull
-from api.v1.models.api_person_models import PersonFull
 from api.v1.models.api_genre_models import Genre
+from api.v1.models.api_person_models import PersonFull
+from elasticsearch import AsyncElasticsearch, NotFoundError
 from models.models import Film, Person
 
 MODELS = {

@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 
-async def main():
+async def start_etl():
     """Main process"""
     logging.info('Start etl process')
     db_conn = None
@@ -38,7 +38,7 @@ async def main():
                     for etl_handler in etl_handlers:
                         tasks.append(etl_handler.process(elastic_conn=elastic, state=state))
                     await asyncio.gather(*tasks)
-                    logging.info(f'ETL resume. Start scan for changes')
+                    logging.info('ETL resume. Start scan for changes')
 
                 except PostgreConnError as db_error:
                     logging.exception(f"Extraction failed. Database connection closed: \n\t {db_error}. "
@@ -63,5 +63,9 @@ async def main():
             logging.exception(f'!!! Something went wrong... \n\t {exc}')
 
 
+def main():
+    asyncio.run(start_etl())
+
+
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

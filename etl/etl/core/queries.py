@@ -27,9 +27,8 @@ WITH modified_genres AS (
     UNION
     SELECT * FROM modified_filmworks
 ), partitioned_records AS (
-    SELECT 
-	    *,
-	    ROW_NUMBER() OVER (PARTITION BY film_work_id ORDER BY modified DESC) as instance_number
+    SELECT *,
+    ROW_NUMBER() OVER (PARTITION BY film_work_id ORDER BY modified DESC) as instance_number
     FROM
         modified_records
 )
@@ -96,11 +95,11 @@ SELECT
         array_agg(DISTINCT pfw.role) 
             FILTER (WHERE pfw.role IS NOT NULL), 
         '{{}}'
-   ) AS role,
+        ) AS role,
     COALESCE (
         array_agg(DISTINCT pfw.film_work_id::text),
         '{{}}'
-   ) AS film_ids
+        ) AS film_ids
 FROM
     content.person_film_work pfw
     LEFT JOIN content.person p ON p.id = pfw.person_id
