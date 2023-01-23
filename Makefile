@@ -32,7 +32,7 @@ admin-up:
 	make superuser
 
 start-load-data-to-elastic:
-	docker-compose exec etl sh -c "python etl.py"
+	docker-compose exec -d etl sh -c "python etl.py"
 
 stop:
 	docker-compose stop
