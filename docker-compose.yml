@@ -112,7 +112,7 @@ services:
     container_name: fastapi_container
     restart: unless-stopped
     expose:
-      - 8000
+      - 8001
 
 volumes:
   static_volume:
