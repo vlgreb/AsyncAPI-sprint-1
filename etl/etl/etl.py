@@ -50,11 +50,11 @@ async def start_etl():
 
                 except elasticsearch.ConnectionError:
                     logging.info("...Reconnect to elastic")
-                    elastic = create_elastic_connection()
+                    elastic = create_elastic_connection(ELASTIC_HOST, ELASTIC_PORT)
 
                 except redis_exceptions.RedisError as redis_exc:
                     logging.exception(f'Redis error occured:\n\t {redis_exc} ')
-                    state = State(RedisStorage(create_redis_connection()))
+                    state = State(RedisStorage(create_redis_connection(REDIS_HOST)))
 
         except (psycopg2.InterfaceError, psycopg2.OperationalError, psycopg2.ProgrammingError):
             db_conn.close()

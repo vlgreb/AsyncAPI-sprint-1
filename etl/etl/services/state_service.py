@@ -12,7 +12,7 @@ class BaseStorage:
         pass
 
     @abc.abstractmethod
-    def retrieve_state(self) -> dict:
+    def retrieve_state(self, key: str) -> dict:
         """Загрузить состояние из постоянного хранилища"""
         pass
 
@@ -22,13 +22,14 @@ class RedisStorage(BaseStorage):
         self.redis_adapter = redis_adapter
 
     def save_state(self, state: dict) -> None:
-        self.redis_adapter.mset(state)
+        for key, value in state.items():
+            self.redis_adapter[key] = value
 
-    def retrieve_state(self) -> dict:
+    def retrieve_state(self, key) -> dict | str | None:
         """Загрузить состояние из постоянного хранилища"""
-        result = {key.decode("utf-8"): self.redis_adapter[key].decode("utf-8")
-                  for key in self.redis_adapter.scan_iter()}
-        return result
+        if self.redis_adapter.exists(key):
+            return self.redis_adapter.get(key).decode('utf-8')
+        return None
 
     def _clear_cache(self):
         """Очистить кэш"""
@@ -45,15 +46,15 @@ class State:
 
     def set_state(self, key: str, value: Any) -> None:
         """Установить состояние для определённого ключа"""
-        json_dict = self.storage.retrieve_state()
-        json_dict[key] = value
-        self.storage.save_state(json_dict)
+        self.storage.save_state({key: value})
 
     def get_state(self, key: str, default=None) -> Any:
         """Получить состояние по определённому ключу"""
-        json_dict = self.storage.retrieve_state()
         try:
-            return json_dict[key]
+            state = self.storage.retrieve_state(key)
+            if state:
+                return state
+            return default
         except (JSONDecodeError, KeyError):
             return default
 
