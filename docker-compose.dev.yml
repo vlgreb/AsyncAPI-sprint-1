@@ -14,14 +14,12 @@ services:
     volumes:
       - postgresql_volume_compose:/var/lib/postgresql/data
       - ./etl/etl/dump.sql:/docker-entrypoint-initdb.d/dump.sql
-    expose:
-      - 5432
+    ports:
+      - "5432:5432"
 
   movies_admin:
     build:
       context: ./movies_admin/movies_admin
-    env_file:
-      - ./.env
     volumes:
       - static_volume:/home/app/movies_admin/staticfiles
       - media_volume:/home/app/movies_admin/mediafiles
@@ -30,9 +28,8 @@ services:
         condition: service_healthy
     container_name: movies_admin_container
     restart: unless-stopped
-    expose:
-      - 8000
-
+    env_file:
+      - ./.env
 
   nginx:
     image: nginx:1.22.1
@@ -59,8 +56,8 @@ services:
       retries: 20
     volumes:
       - redis_volume:/data
-    expose:
-      - 6379
+    ports:
+      - "6379:6379"
 
   elastic:
     image: elasticsearch:8.5.3
@@ -79,10 +76,24 @@ services:
       timeout: 5s
       retries: 120
     container_name: elastic_compose
-    expose:
-      - 9200
+    ports:
+      - "9200:9200"
     volumes:
       - elastic_volume_compose:/usr/share/elasticsearch/data
+
+  kibana:
+    image: kibana:8.5.3
+    environment:
+      - ELASTICSEARCH_HOSTS=["http://elastic:9200"]
+    ports:
+      - "5601:5601"
+    container_name: kibana_compose
+    volumes:
+      - kibana_volume_compose:/usr/share/kibana/data
+    depends_on:
+      elastic:
+        condition: service_healthy
+    restart: unless-stopped
 
   etl:
     build:
@@ -111,8 +122,8 @@ services:
         condition: service_healthy
     container_name: fastapi_container
     restart: unless-stopped
-    expose:
-      - 8001
+    ports:
+      - "8000:8000"
 
 volumes:
   static_volume:
