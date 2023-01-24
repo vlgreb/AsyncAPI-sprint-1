@@ -55,8 +55,8 @@ class BaseDataService:
         :return: FilmFull | PersonFull | Genre | None
         """
         if self.redis.exists(doc_id):
-            logging.info(f'[{self.service_name}] from cache by id')
-            return await self.redis.get(doc_id)
+            logging.info('[%s] from cache by id', self.service_name)
+            return await self.redis.get(f'{self.index_name}{doc_id}')
 
     async def _put_item_to_cache(self, doc: FilmFull | PersonFull | Genre) -> None:
         """
@@ -64,8 +64,8 @@ class BaseDataService:
         :param doc: экземпляр модели данных FilmFull | PersonFull | Genre
         :return: None
         """
-        logging.info(f'[{self.service_name}] write to cache by id')
-        await self.redis.set(doc.id, doc.json(), expire=CACHE_EXPIRE_IN_SECONDS)
+        logging.info('[%s] write to cache by id', self.service_name)
+        await self.redis.set(f'{self.index_name}{doc.id}', doc.json(), expire=CACHE_EXPIRE_IN_SECONDS)
 
     async def _get_item_from_elastic(self, doc_id: str) -> FilmFull | PersonFull | Genre | None:
         """
@@ -75,11 +75,11 @@ class BaseDataService:
         """
         try:
             doc = await self.elastic.get(index=self.index_name, id=doc_id)
-            logging.info(f'[{self.service_name}] from elastic by id')
+            logging.info('[%s] from elastic by id', self.service_name)
 
             result = self.model(**doc['_source'])
         except NotFoundError:
-            logging.info(f'[{self.service_name}] can\'t find in elastic by id')
+            logging.info('[%s] can\'t find in elastic by id', self.service_name)
             return None
         return result
 
@@ -100,7 +100,7 @@ class BaseDataService:
         :param key:
         :return:
         """
-        logging.info(f'[{self.service_name}] write film_data to cache')
+        logging.info('[%s] write film_data to cache', self.service_name)
         await self.redis.rpush(key, *data)
 
     @staticmethod
@@ -143,7 +143,7 @@ class BaseDataService:
 
         else:
             data = [model_class.parse_raw(item) for item in data]
-            logging.info(f'[{self.service_name}] data from cache')
+            logging.info('[%s] data from cache', self.service_name)
 
         return data
 
@@ -164,9 +164,9 @@ class BaseDataService:
             data = await self.elastic.search(index=index, body=body)
             data = [model_class(**item['_source']) for item in data['hits']['hits']]
 
-            logging.info(f'[{self.service_name}] get data from elastic')
+            logging.info('[%s] get data from elastic', self.service_name)
         except NotFoundError:
-            logging.info(f"[{self.service_name}] can't find data in elastic")
+            logging.info("[%s] can't find data in elastic", self.service_name)
             return None
 
         return data

@@ -61,12 +61,12 @@ class ETLHandler:
 
                 else:
                     state.set_state(self.config.state_key, new_last_modified_date)
-                    logging.info(f'\tExtracted {len(batch)} rows for {self.config.elastic_index_name}')
+                    logging.info('\tExtracted %s rows for {self.config.elastic_index_name}', len(batch))
                     logging.info(
                         f'State "{self.config.state_key}" updated from {self.last_modified_date}'
                         f' to {new_last_modified_date}')
 
-        logging.info(f'ETL for {self.config.elastic_index_name} finished. Paused for {SLEEP_TIME_SECONDS} seconds')
+        logging.info('ETL for %s finished. Paused for {SLEEP_TIME_SECONDS} seconds', self.config.elastic_index_name)
         await asyncio.sleep(SLEEP_TIME_SECONDS)
 
 

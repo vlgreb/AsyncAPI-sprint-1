@@ -19,7 +19,7 @@ class ElasticsearchLoader:
         try:
             elastic_conn.indices.create(index=index_name, **index_schema)
         except BadRequestError as exc:
-            logging.info(f'Index {index_name} insertion error -> {exc}')
+            logging.info('Index %s insertion error -> {exc}', index_name)
 
     @staticmethod
     def load_data_to_elastic(elastic_conn: Elasticsearch, transformed_data: list) -> None:
@@ -49,7 +49,7 @@ def create_indices(etl_handlers: list, elastic: Elasticsearch) -> Elasticsearch:
                     index_schema=etl_handler.config.index_schema,
                     elastic_conn=elastic)
         except (ConnectionError, TransportError) as elastic_exc:
-            logging.exception(f'Elastic connection error. Creation indices aborted\n\t {elastic_exc}')
+            logging.exception('Elastic connection error. Creation indices aborted\n\t %s', elastic_exc)
             elastic = create_elastic_connection()
         else:
             return elastic
