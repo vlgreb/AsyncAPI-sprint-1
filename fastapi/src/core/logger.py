@@ -1,3 +1,7 @@
+from core.configs.prod.configs import LogConfig
+
+log_config = LogConfig()
+
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOG_DEFAULT_HANDLERS = ['console', ]
 
@@ -20,7 +24,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': log_config.CONSOLE_LOG_LEVEL,
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
@@ -38,19 +42,19 @@ LOGGING = {
     'loggers': {
         '': {
             'handlers': LOG_DEFAULT_HANDLERS,
-            'level': 'INFO',
+            'level': log_config.UVICORN_LOG_LEVEL,
         },
         'uvicorn.error': {
-            'level': 'INFO',
+            'level': log_config.UVICORN_LOG_LEVEL,
         },
         'uvicorn.access': {
             'handlers': ['access'],
-            'level': 'INFO',
+            'level': log_config.UVICORN_LOG_LEVEL,
             'propagate': False,
         },
     },
     'root': {
-        'level': 'INFO',
+        'level': log_config.ROOT_LOG_LEVEL,
         'formatter': 'verbose',
         'handlers': LOG_DEFAULT_HANDLERS,
     },
