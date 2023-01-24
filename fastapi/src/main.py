@@ -1,12 +1,13 @@
 import aioredis
 import uvicorn
 from api.v1 import films, genres, persons
+from core import config
+from core.configs.prod.configs import ConnectionConfig
 from db import elastic, redis
 from elasticsearch import AsyncElasticsearch
 
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
-from core.configs.prod.configs import ConnectionConfig
 
 app = FastAPI(
     title='Read-only API для онлайн-кинотеатра',

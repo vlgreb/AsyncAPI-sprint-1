@@ -3,7 +3,6 @@ import os
 from pydantic import BaseSettings
 from pydantic.fields import Field
 
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
