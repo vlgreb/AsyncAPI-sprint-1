@@ -8,11 +8,12 @@ ENV APP_HOME=/home/app/fastapi
 WORKDIR $APP_HOME
 
 COPY ./requirements.txt .
+COPY ./entrypoint.sh .
 
 RUN pip install --upgrade pip &&  \
     pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY src/ .
 
 RUN groupadd -r app &&  \
     useradd -d $HOME -r -g app app && \
@@ -20,7 +21,7 @@ RUN groupadd -r app &&  \
 
 RUN chmod +x  $APP_HOME/entrypoint.sh
 
-EXPOSE 8000
+EXPOSE 8001
 
 USER app
 
