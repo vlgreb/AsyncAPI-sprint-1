@@ -4,11 +4,23 @@ up:
 	make admin-up
 	make start-load-data-to-elastic
 
+dev-up:
+	make dev-build
+	make dev-start
+	make admin-up
+	make start-load-data-to-elastic
+
 build:
 	docker-compose build --no-cache
 
+dev-build:
+	docker-compose -f docker-compose.dev.yml build --no-cache
+
 start:
 	docker-compose up -d
+
+dev-start:
+	docker-compose -f docker-compose.dev.yml up -d
 
 fake-migrate:
 	docker-compose exec movies_admin python manage.py migrate --no-input --fake movies
@@ -42,3 +54,6 @@ remove:
 
 remove-all:
 	docker-compose down -v
+
+force-remove:
+	docker-compose down --remove-orphans
