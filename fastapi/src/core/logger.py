@@ -1,4 +1,4 @@
-from core.configs.prod.configs import LogConfig
+from core.configs import LogConfig
 
 log_config = LogConfig()
 

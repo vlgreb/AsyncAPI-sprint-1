@@ -23,6 +23,7 @@ class ConnectionConfig(BaseConfig):
 
 
 class LogConfig(BaseConfig):
+
     CONSOLE_LOG_LEVEL: str = Field(env='CONSOLE_LOG_LEVEL')
     UVICORN_LOG_LEVEL: str = Field(env='UVICORN_LOG_LEVEL')
     ROOT_LOG_LEVEL: str = Field(env='ROOT_LOG_LEVEL')
