@@ -2,7 +2,7 @@ import uuid
 from typing import List
 
 
-def get_movies_list(index_name, size) -> List[dict]:
+def get_movies_list(size) -> List[dict]:
     es_data = [{
         'id': str(uuid.uuid4()),
         'imdb_rating': 8.5,
@@ -29,7 +29,7 @@ def get_movies_list(index_name, size) -> List[dict]:
 
     return [
         {
-            '_index': index_name,
+            '_index': 'movies',
             '_id': row['id'],
             '_source': row
         } for row in es_data

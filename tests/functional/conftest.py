@@ -1,6 +1,4 @@
 import asyncio
-import time
-import uuid
 from typing import List
 
 import aiohttp
@@ -13,6 +11,8 @@ from elasticsearch.helpers.errors import BulkIndexError
 
 from tests.functional.settings import (TestSettings, connection_settings,
                                        movies_settings)
+
+from .testdata.data_generator import get_movies_list
 
 
 @pytest.fixture(scope='session')
@@ -38,21 +38,9 @@ async def redis_client():
     await redis.wait_closed()
 
 
-# @pytest_asyncio.fixture
-# def es_create_index(es_client):
-#     async def inner(index: TestSettings):
-#         print('before check index')
-#         if await es_client.indices.exists(index=index.es_index):
-#
-#             await es_client.indices.delete(index=index.es_index)
-#             print('delete index')
-#
-#             await es_client.indices.create(index=index.es_index,
-#                                            settings=index.es_index_mapping['settings'],
-#                                            mappings=index.es_index_mapping['mappings'])
-#             print('create index')
-#
-#     return inner
+@pytest_asyncio.fixture(scope='session')
+async def es_create_movies_index(es_client):
+    await create_index(es_client, movies_settings)
 
 
 async def create_index(es_client: AsyncElasticsearch, index: TestSettings):
@@ -75,11 +63,6 @@ async def create_index(es_client: AsyncElasticsearch, index: TestSettings):
 
 
 @pytest_asyncio.fixture(scope='session')
-async def es_create_movies_index(es_client):
-    await create_index(es_client, movies_settings)
-
-
-@pytest_asyncio.fixture(scope='session')
 def es_write_data(es_client):
     async def inner(data: List[dict], index: TestSettings):
 
@@ -92,39 +75,13 @@ def es_write_data(es_client):
     return inner
 
 
-@pytest_asyncio.fixture(scope='function')
-def es_movies_data() -> List[dict]:
-    data = [{
-        'id': str(uuid.uuid4()),
-        'imdb_rating': 8.5,
-        'genres': [
-            {'id': 'genre1', 'name': 'Action'},
-            {'id': 'genre2', 'name': 'Sci-Fi'}
-        ],
-        'creation_date': 2022,
-        'title': 'The Star',
-        'description': 'New World',
-        'actors': [
-            {'id': '111', 'full_name': 'Ann'},
-            {'id': '222', 'full_name': 'Bob'}
-        ],
-        'writers': [
-            {'id': '333', 'full_name': 'Ben'},
-            {'id': '444', 'full_name': 'Howard'}
-        ],
-        'directors': [
-            {'id': '555', 'full_name': 'Igor'},
-            {'id': '777', 'full_name': 'Vladimir'}
-        ]
-    } for _ in range(110)]
 
-    return [
-        {
-            '_index': movies_settings.es_index,
-            '_id': row['id'],
-            '_source': row
-        } for row in data
-    ]
+
+MOVIES_COUNT = 110
+
+@pytest_asyncio.fixture(scope='session')
+def es_movies_data() -> List[dict]:
+    return get_movies_list(MOVIES_COUNT)
 
 
 @pytest_asyncio.fixture(scope='session')

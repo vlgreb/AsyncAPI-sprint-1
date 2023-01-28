@@ -1,8 +1,6 @@
-import logging
-import time
 import asyncio
 from typing import List
-from elasticsearch import AsyncElasticsearch
+
 import pytest
 
 from tests.functional.conftest import (es_client, es_movies_data,
@@ -29,7 +27,7 @@ from tests.functional.settings import movies_settings
 )
 @pytest.mark.asyncio
 async def test_movies_search(es_client, make_get_request, es_write_data, es_movies_data: List[dict],
-                             es_create_index, query_data: dict, expected_answer: dict):
+                             es_create_movies_index, query_data: dict, expected_answer: dict):
     # await es_create_index(movies_settings)
     if await es_client.indices.exists(index=movies_settings.es_index):
         await es_write_data(es_movies_data, movies_settings)
@@ -38,7 +36,6 @@ async def test_movies_search(es_client, make_get_request, es_write_data, es_movi
 
         response = await make_get_request('/search', query_data, movies_settings)
         assert expected_answer == response
-
 
 
 @pytest.mark.parametrize(
@@ -60,7 +57,8 @@ async def test_movies_search(es_client, make_get_request, es_write_data, es_movi
 )
 @pytest.mark.asyncio
 async def test_movies_search2(es_client, make_get_request, es_write_data, es_movies_data: List[dict],
-                             es_create_index, query_data: dict, expected_answer: dict):
+                              es_create_movies_index, query_data: dict, expected_answer: dict):
+
     if await es_client.indices.exists(index=movies_settings.es_index):
         await es_write_data(es_movies_data, movies_settings)
 
