@@ -1,4 +1,5 @@
 import asyncio
+import time
 import uuid
 from typing import List
 
@@ -37,34 +38,61 @@ async def redis_client():
     await redis.wait_closed()
 
 
+# @pytest_asyncio.fixture
+# def es_create_index(es_client):
+#     async def inner(index: TestSettings):
+#         print('before check index')
+#         if await es_client.indices.exists(index=index.es_index):
+#
+#             await es_client.indices.delete(index=index.es_index)
+#             print('delete index')
+#
+#             await es_client.indices.create(index=index.es_index,
+#                                            settings=index.es_index_mapping['settings'],
+#                                            mappings=index.es_index_mapping['mappings'])
+#             print('create index')
+#
+#     return inner
+
+
+async def create_index(es_client: AsyncElasticsearch, index: TestSettings):
+    print('before check index')
+    index_exists = await es_client.indices.exists(index=index.es_index)
+    print(f'index {index.es_index} exists - ', index_exists)
+    if index_exists:
+        await es_client.indices.delete(index=index.es_index)
+        print('delete index')
+
+    index_exists = await es_client.indices.exists(index=index.es_index)
+    print(f'index {index.es_index} exists - ', index_exists)
+    print(f'create index {index.es_index}')
+    await es_client.indices.create(index=index.es_index,
+                                   settings=index.es_index_mapping['settings'],
+                                   mappings=index.es_index_mapping['mappings'])
+
+    index_exists = await es_client.indices.exists(index=index.es_index)
+    print(f'index {index.es_index} exists - ', index_exists)
+
+
 @pytest_asyncio.fixture(scope='session')
-def es_create_index(es_client):
-    async def inner(index: TestSettings):
-        if await es_client.indices.exists(index=index.es_index):
-
-            await es_client.indices.delete(index=index.es_index)
-
-            await es_client.indices.create(index=index.es_index,
-                                           settings=index.es_index_mapping['settings'],
-                                           mappings=index.es_index_mapping['mappings'])
-    return inner
+async def es_create_movies_index(es_client):
+    await create_index(es_client, movies_settings)
 
 
-@pytest_asyncio.fixture
-def es_write_data(es_client, es_create_index):
+@pytest_asyncio.fixture(scope='session')
+def es_write_data(es_client):
     async def inner(data: List[dict], index: TestSettings):
-
-        await es_create_index(index=index)
 
         try:
             await async_bulk(es_client, data, index=index.es_index)
+
         except BulkIndexError:
             raise Exception('Ошибка записи данных в Elasticsearch')
 
     return inner
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope='function')
 def es_movies_data() -> List[dict]:
     data = [{
         'id': str(uuid.uuid4()),
@@ -106,7 +134,7 @@ async def api_session(event_loop):
     await session.close()
 
 
-@pytest_asyncio.fixture(scope='session')
+@pytest_asyncio.fixture(scope='function')
 def make_get_request(api_session):
 
     async def inner(query: str, query_params: dict, settings: TestSettings):
