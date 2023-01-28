@@ -17,27 +17,23 @@ class BaseConfig(BaseSettings):
         env_file_encoding = 'utf-8'
 
 
-class MoviesSettings(BaseConfig):
-
-    es_index: str = Field('movies_test')
-    es_index_mapping: dict = movies_index
-
-
-class GenreSettings(BaseConfig):
-
-    es_index: str = Field('genres_test')
-    es_index_mapping: dict = genre_index
-
-
-class PersonSettings(BaseConfig):
-
-    es_index: str = Field('persons_test')
-    es_index_mapping: dict = person_index
+class TestSettings(BaseSettings):
+    es_index: str
+    es_index_mapping: dict
+    api_prefix: str
 
 
 connection_settings = BaseConfig()
 
-movies_settings = MoviesSettings()
+movies_settings = TestSettings(es_index='movies_test',
+                               es_index_mapping=movies_index,
+                               api_prefix='/api/v1/films')
+genre_settings = TestSettings(es_index='genres_test',
+                              es_index_mapping=genre_index,
+                              api_prefix='/api/v1/genres')
+person_settings = TestSettings(es_index='persons_test',
+                               es_index_mapping=person_index,
+                               api_prefix='/api/v1/persons')
 
-# print(connection_settings.dict())
-# print(os.path.join(os.getcwd(), '.env'))
+
+print(movies_settings.dict())
