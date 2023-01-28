@@ -51,8 +51,24 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  fastapi:
+    build:
+      context: ./fastapi
+    env_file:
+      - ./.env
+    depends_on:
+      redis:
+        condition: service_healthy
+      elastic:
+        condition: service_healthy
+    container_name: fastapi_container
+    restart: unless-stopped
+    entrypoint: sh -c "uvicorn main:app --host 0.0.0.0 --port 8001"
+    ports:
+      - "8001:8001"
 
 volumes:
+  postgresql_volume_compose:
   redis_volume:
   elastic_volume_compose:
   kibana_volume_compose:

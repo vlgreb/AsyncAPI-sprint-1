@@ -84,6 +84,7 @@ TEXT_KEYWORD_SETTINGS = {
 }
 
 movies_index = {
+    "index": "movies",
     "settings": SETTINGS,
     "mappings": {
         "dynamic": "strict",
@@ -112,6 +113,7 @@ movies_index = {
 }
 
 genre_index = {
+    "index": "genres",
     "settings": SETTINGS,
     "mappings": {
         "dynamic": "strict",
@@ -120,6 +122,7 @@ genre_index = {
 }
 
 person_index = {
+    "index": "persons",
     "settings": SETTINGS,
     "mappings": {
         "dynamic": "strict",

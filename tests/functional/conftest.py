@@ -1,49 +1,70 @@
-import pytest
-import aioredis
+import asyncio
 import uuid
-
-import aiohttp
 from typing import List
 
-from elasticsearch.helpers.errors import BulkIndexError
+import aiohttp
+import aioredis
+import pytest
+import pytest_asyncio
+from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
-from elasticsearch import AsyncElasticsearch, Elasticsearch
-from tests.functional.settings import TestSettings, connection_settings, movies_settings, genre_settings, person_settings
+from elasticsearch.helpers.errors import BulkIndexError
+
+from tests.functional.settings import (TestSettings, connection_settings,
+                                       movies_settings)
 
 
 @pytest.fixture(scope='session')
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope='session')
 async def es_client():
-    es_client = AsyncElasticsearch(hosts=[connection_settings.es_host])
-    yield es_client
-    await es_client.close()
+    client = AsyncElasticsearch(hosts=[f'{connection_settings.es_host}:{connection_settings.es_port}'])
+    yield client
+    await client.close()
 
 
-@pytest.fixture(scope='session')
+@pytest_asyncio.fixture(scope='session')
 async def redis_client():
-    redis_client = await aioredis.create_redis_pool(
+    redis = await aioredis.create_redis_pool(
         (connection_settings.redis_host, connection_settings.redis_port), minsize=10, maxsize=20)
-    yield redis_client
-    redis_client.close()
-    await redis_client.wait_closed()
+    yield redis
+    redis.close()
+    await redis.wait_closed()
 
 
-# @pytest.fixture
-# async def es_create_index(es_client: AsyncElasticsearch, index: TestSettings):
-#     yield await es_client.indices.create(index=index.es_index, **index.es_index_mapping)
-#     await es_client.indices.delete(index=index.es_index)
+@pytest_asyncio.fixture(scope='session')
+def es_create_index(es_client):
+    async def inner(index: TestSettings):
+        if await es_client.indices.exists(index=index.es_index):
+
+            await es_client.indices.delete(index=index.es_index)
+
+            await es_client.indices.create(index=index.es_index,
+                                           settings=index.es_index_mapping['settings'],
+                                           mappings=index.es_index_mapping['mappings'])
+    return inner
 
 
-@pytest.fixture
-def es_write_data(es_client: AsyncElasticsearch):
+@pytest_asyncio.fixture
+def es_write_data(es_client, es_create_index):
     async def inner(data: List[dict], index: TestSettings):
+
+        await es_create_index(index=index)
+
         try:
             await async_bulk(es_client, data, index=index.es_index)
         except BulkIndexError:
             raise Exception('Ошибка записи данных в Elasticsearch')
+
     return inner
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def es_movies_data() -> List[dict]:
     data = [{
         'id': str(uuid.uuid4()),
@@ -78,22 +99,22 @@ def es_movies_data() -> List[dict]:
     ]
 
 
-@pytest.fixture(scope='session')
-def api_session():
+@pytest_asyncio.fixture(scope='session')
+async def api_session(event_loop):
     session = aiohttp.ClientSession()
     yield session
-    session.close()
+    await session.close()
 
 
-@pytest.fixture()
-def make_get_request():
+@pytest_asyncio.fixture(scope='session')
+def make_get_request(api_session):
+
     async def inner(query: str, query_params: dict, settings: TestSettings):
-        session = aiohttp.ClientSession()
-        url = connection_settings.service_url + settings.api_prefix + query
+        url = f'{settings.api_prefix}{query}'
         async with api_session.get(url, params=query_params) as response:
             body = await response.json()
             status = response.status
 
-        await session.close()
         return {'status': status, 'length': len(body)}
+
     return inner

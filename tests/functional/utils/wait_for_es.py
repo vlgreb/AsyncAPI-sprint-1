@@ -1,13 +1,12 @@
 import time
 
-from tests.functional.settings import connection_settings
-
-
 from elasticsearch import Elasticsearch
+
+from tests.functional.settings import connection_settings
 
 if __name__ == '__main__':
 
-    es_client = Elasticsearch(hosts=connection_settings.es_host, validate_cert=False, use_ssl=False)
+    es_client = Elasticsearch(hosts=[f'{connection_settings.es_host}:{connection_settings.es_port}'])
 
     while True:
 

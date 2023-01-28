@@ -1,3 +1,8 @@
+test-local:
+	docker-compose -f docker-compose.local-testing.yml up -d
+	echo 'ElasticSearch is empty and ready for testing'
+	pytest tests/
+
 up:
 	make build
 	make start

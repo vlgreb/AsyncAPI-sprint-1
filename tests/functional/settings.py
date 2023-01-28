@@ -1,15 +1,17 @@
 import os
+from pathlib import Path
 
 from pydantic import BaseSettings, Field
 
-from tests.functional.testdata.es_mapping import person_index, genre_index, movies_index
-
-from pathlib import Path
+from tests.functional.testdata.es_mapping import (genre_index, movies_index,
+                                                  person_index)
 
 
 class BaseConfig(BaseSettings):
-    es_host: str = Field('http://127.0.0.1:9200', env='ELASTIC_HOST')
-    redis_host: str = Field('http://127.0.0.1:6379', env='REDIS_HOST')
+    es_host: str = Field('http://127.0.0.1', env='ELASTIC_HOST')
+    es_port: int = Field(9200, env='ELASTIC_PORT')
+    redis_host: str = Field('http://127.0.0.1', env='REDIS_HOST')
+    redis_port: int = Field(6379, env='REDIS_PORT')
     service_url: str = Field('http://127.0.0.1:8001', env='SERVICE_URL')
 
     class Config:
@@ -25,15 +27,12 @@ class TestSettings(BaseSettings):
 
 connection_settings = BaseConfig()
 
-movies_settings = TestSettings(es_index='movies_test',
+movies_settings = TestSettings(es_index='movies',
                                es_index_mapping=movies_index,
-                               api_prefix='/api/v1/films')
-genre_settings = TestSettings(es_index='genres_test',
+                               api_prefix=f'{connection_settings.service_url}/api/v1/films')
+genre_settings = TestSettings(es_index='genres',
                               es_index_mapping=genre_index,
-                              api_prefix='/api/v1/genres')
-person_settings = TestSettings(es_index='persons_test',
+                              api_prefix=f'{connection_settings.service_url}/api/v1/genres')
+person_settings = TestSettings(es_index='persons',
                                es_index_mapping=person_index,
-                               api_prefix='/api/v1/persons')
-
-
-print(movies_settings.dict())
+                               api_prefix=f'{connection_settings.service_url}/api/v1/persons')

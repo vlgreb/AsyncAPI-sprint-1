@@ -1,7 +1,8 @@
-from redis import Redis, exceptions
-from tests.functional.settings import connection_settings
-
 import time
+
+from redis import Redis, exceptions
+
+from tests.functional.settings import connection_settings
 
 if __name__ == '__main__':
 

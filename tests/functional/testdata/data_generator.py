@@ -1,5 +1,5 @@
-from typing import List
 import uuid
+from typing import List
 
 
 def get_movies_list(index_name, size) -> List[dict]:
