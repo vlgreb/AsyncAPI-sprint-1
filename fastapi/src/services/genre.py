@@ -20,7 +20,6 @@ class GenreService(BaseDataService):
         super().__init__(redis, elastic)
         self.index_name = 'genres'
         self.service_name = 'GenreService'
-        self.model = Genre
 
     async def get_list_genres(self, page: int, size: int) -> Optional[List[Genre]]:
         """

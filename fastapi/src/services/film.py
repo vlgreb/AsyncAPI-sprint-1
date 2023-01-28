@@ -19,8 +19,6 @@ class FilmService(BaseDataService):
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
         super().__init__(redis, elastic)
         self.index_name = 'movies'
-        self.service_name = 'FilmService'
-        self.model = Film
 
     async def get_list_films(self, page: int, size: int,
                              sort_imdb: str, genre_id: Optional[str]) -> Optional[List[Film]]:

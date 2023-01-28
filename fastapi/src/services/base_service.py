@@ -3,14 +3,15 @@ from typing import List, Optional
 
 from aioredis import Redis
 from api.v1.models.api_film_models import FilmFull
-from api.v1.models.api_genre_models import Genre
+from api.v1.models.api_genre_models import GenreBase
 from api.v1.models.api_person_models import PersonFull
 from elasticsearch import AsyncElasticsearch, NotFoundError
-from models.models import Film, Person
+from models.models import Film, Person, Genre
 
 MODELS = {
-    "Film": Film,
-    "Person": Person
+    "movies": Film,
+    "persons": Person,
+    "genres": Genre
 }
 
 CACHE_EXPIRE_IN_SECONDS = 60 * 5
@@ -27,15 +28,14 @@ class BaseDataService:
         self.index_name = index_name
         # TODO: выпилить переменную service_name, если получится
         self.service_name = service_name
-        self.model = None
 
-    async def get_by_id(self, doc_id: str) -> FilmFull | PersonFull | Genre | None:
+    async def get_by_id(self, doc_id: str) -> FilmFull | PersonFull | GenreBase | None:
         """
         Возвращает документ по ключу (id). Ищет документ по ключу doc_id в кэше Redis и,
         если не находит, обращается к ElasticSearch. Возвращает None при отсутствии в Elastic.
 
         :param doc_id: строка (ключ, id), по которой ищется документ
-        :return: экземпляр модели данных self.model (FilmFull | PersonFull | Genre) или None
+        :return: экземпляр модели данных self.model (FilmFull | PersonFull | GenreBase) или None
         """
         data = await self._get_item_from_cache(doc_id)
         if not data:
@@ -45,39 +45,39 @@ class BaseDataService:
             await self._put_item_to_cache(data)
 
         else:
-            data = self.model.parse_raw(data)
+            data = MODELS[self.index_name].parse_raw(data)
         return data
 
-    async def _get_item_from_cache(self, doc_id: str) -> FilmFull | PersonFull | Genre | None:
+    async def _get_item_from_cache(self, doc_id: str) -> FilmFull | PersonFull | GenreBase | None:
         """
         Ищет документ по ключу doc_id в кэше Redis
         :param doc_id: строка (ключ, id), по которой ищется документ
-        :return: FilmFull | PersonFull | Genre | None
+        :return: FilmFull | PersonFull | GenreBase | None
         """
         if self.redis.exists(doc_id):
             logging.info('[%s] from cache by id', self.service_name)
             return await self.redis.get(f'{self.index_name}{doc_id}')
 
-    async def _put_item_to_cache(self, doc: FilmFull | PersonFull | Genre) -> None:
+    async def _put_item_to_cache(self, doc: FilmFull | PersonFull | GenreBase) -> None:
         """
         Сохраняет документ в кэш Redis.
-        :param doc: экземпляр модели данных FilmFull | PersonFull | Genre
+        :param doc: экземпляр модели данных FilmFull | PersonFull | GenreBase
         :return: None
         """
         logging.info('[%s] write to cache by id', self.service_name)
         await self.redis.set(f'{self.index_name}{doc.id}', doc.json(), expire=CACHE_EXPIRE_IN_SECONDS)
 
-    async def _get_item_from_elastic(self, doc_id: str) -> FilmFull | PersonFull | Genre | None:
+    async def _get_item_from_elastic(self, doc_id: str) -> FilmFull | PersonFull | GenreBase | None:
         """
 
         :param doc_id: строка (ключ, id), по которой ищется документ
-        :return: FilmFull | PersonFull | Genre | None
+        :return: FilmFull | PersonFull | GenreBase | None
         """
         try:
             doc = await self.elastic.get(index=self.index_name, id=doc_id)
             logging.info('[%s] from elastic by id', self.service_name)
 
-            result = self.model(**doc['_source'])
+            result = MODELS[self.index_name](**doc['_source'])
         except NotFoundError:
             logging.info('[%s] can\'t find in elastic by id', self.service_name)
             return None
@@ -107,8 +107,8 @@ class BaseDataService:
     def _get_hash(kwargs):
         return str(hash(kwargs))
 
-    async def _get_data(self, body: dict, size: int, index_name: str = None,
-                        model: str = None) -> List[FilmFull | PersonFull | Genre] | None:
+    async def _get_data(self, body: dict, size: int,
+                        index_name: str = None) -> List[FilmFull | PersonFull | GenreBase] | None:
         """
         Метод достает данные из кэша или эластика
         :param body: тело запроса
@@ -117,11 +117,6 @@ class BaseDataService:
         :param model: модель для парсинга возвращаемого результата
         :return:
         """
-
-        if not model:
-            model_class = self.model
-        else:
-            model_class = MODELS[model]
 
         if not index_name:
             index_name = self.index_name
@@ -132,7 +127,7 @@ class BaseDataService:
 
         if not data:
 
-            data = await self._get_data_from_elastic(body=body, index=index_name, model=model)
+            data = await self._get_data_from_elastic(body=body, index=index_name)
 
             if not data:
                 return None
@@ -142,27 +137,21 @@ class BaseDataService:
             await self._put_full_data_to_cache(data=cache_data, key=redis_key)
 
         else:
-            data = [model_class.parse_raw(item) for item in data]
+            data = [MODELS[self.index_name].parse_raw(item) for item in data]
             logging.info('[%s] data from cache', self.service_name)
 
         return data
 
-    async def _get_data_from_elastic(self, body: dict, index: str,
-                                     model: str) -> List[FilmFull | PersonFull | Genre] | None:
+    async def _get_data_from_elastic(self, body: dict, index: str) -> List[FilmFull | PersonFull | GenreBase] | None:
         """
         Возвращает список данных из кэша или Elastic
         :param body: тело запроса к elasticsearch
-        :return: List[FilmFull | PersonFull | Genre] | None
+        :return: List[FilmFull | PersonFull | GenreBase] | None
         """
-
-        if not model:
-            model_class = self.model
-        else:
-            model_class = MODELS[model]
 
         try:
             data = await self.elastic.search(index=index, body=body)
-            data = [model_class(**item['_source']) for item in data['hits']['hits']]
+            data = [MODELS[self.index_name](**item['_source']) for item in data['hits']['hits']]
 
             logging.info('[%s] get data from elastic', self.service_name)
         except NotFoundError:

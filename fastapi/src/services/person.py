@@ -24,7 +24,6 @@ class PersonService(BaseDataService):
         super().__init__(redis, elastic)
         self.index_name = 'persons'
         self.service_name = 'PersonService'
-        self.model = Person
 
     async def get_list_persons(self, page: int, size: int) -> Optional[List[Person]]:
         """
@@ -98,7 +97,7 @@ class PersonService(BaseDataService):
 
         logging.info(body)
 
-        return await self._get_data(body=body, index_name='movies', size=PERSON_FILM, model='Film')
+        return await self._get_data(body=body, index_name='movies', size=PERSON_FILM)
 
 
 @lru_cache()
