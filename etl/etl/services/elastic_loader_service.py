@@ -19,7 +19,7 @@ class ElasticsearchLoader:
         try:
             elastic_conn.indices.create(index=index_name, **index_schema)
         except BadRequestError as exc:
-            logging.info('Index %s insertion error -> {exc}', index_name)
+            logging.info('Index %s insertion error -> %s', index_name, exc)
 
     @staticmethod
     def load_data_to_elastic(elastic_conn: Elasticsearch, transformed_data: list) -> None:

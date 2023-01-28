@@ -66,7 +66,10 @@ class ETLHandler:
                         f'State "{self.config.state_key}" updated from {self.last_modified_date}'
                         f' to {new_last_modified_date}')
 
-        logging.info('ETL for %s finished. Paused for {SLEEP_TIME_SECONDS} seconds', self.config.elastic_index_name)
+        logging.info('ETL for %s finished. Paused for %s seconds',
+                     self.config.elastic_index_name,
+                     SLEEP_TIME_SECONDS)
+
         await asyncio.sleep(SLEEP_TIME_SECONDS)
 
 
