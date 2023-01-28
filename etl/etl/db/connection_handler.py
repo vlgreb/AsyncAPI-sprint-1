@@ -9,8 +9,8 @@ from psycopg2.extras import DictCursor
 from redis import Redis
 from redis import exceptions as redis_exceptions
 
-from .backoff_handlers import (elastic_conn_backoff_hdlr, pg_conn_backoff_hdlr,
-                               pg_conn_success_hdlr, redis_conn_backoff_hdlr)
+from db.backoff_handlers import (elastic_conn_backoff_hdlr, pg_conn_backoff_hdlr,
+                                 pg_conn_success_hdlr, redis_conn_backoff_hdlr)
 
 
 class PostgreConnError(Exception):
