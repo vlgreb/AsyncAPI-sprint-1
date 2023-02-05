@@ -23,7 +23,7 @@ async def startup():
     redis.redis = await aioredis.create_redis_pool(
         (conf.CONNECTION_SETTINGS.redis_host, conf.CONNECTION_SETTINGS.redis_port), minsize=10, maxsize=20)
     elastic.es = AsyncElasticsearch(
-        hosts=[f'http://{conf.CONNECTION_SETTINGS.elastic_host}:{conf.CONNECTION_SETTINGS.elastic_port}'])
+        hosts=[f'{conf.CONNECTION_SETTINGS.elastic_host}:{conf.CONNECTION_SETTINGS.elastic_port}'])
 
 
 @app.on_event('shutdown')

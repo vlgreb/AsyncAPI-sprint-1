@@ -20,6 +20,7 @@ services:
   movies_admin:
     build:
       context: ./movies_admin/movies_admin
+    image: movies-admin-image
     env_file:
       - ./.env
     volumes:
@@ -87,6 +88,7 @@ services:
   etl:
     build:
       context: ./etl/etl
+    image: etl-image
     env_file:
       - ./.env
     depends_on:
@@ -100,6 +102,7 @@ services:
   fastapi:
     build:
       context: ./fastapi
+    image: fastapi-image
     env_file:
       - ./.env
     depends_on:
@@ -113,6 +116,21 @@ services:
     restart: unless-stopped
     expose:
       - 8001
+
+  tests:
+    image: fastapi-image
+    depends_on:
+      - fastapi
+    env_file:
+      - ./.env
+    volumes:
+      - ./tests:/tests
+      - ./tests/functional/.env.docker:/tests/functional/.env
+    entrypoint: >
+      sh -c "pip install -r /tests/functional/requirements.txt
+      && python3 /tests/functional/utils/wait_for_es.py
+      && python3 /tests/functional/utils/wait_for_redis.py
+      && python3 -m pytest /tests/functional/src"
 
 volumes:
   static_volume:

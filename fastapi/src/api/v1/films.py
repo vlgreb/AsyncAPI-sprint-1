@@ -1,10 +1,12 @@
 from http import HTTPStatus
-from typing import List, Optional
+from typing import List
 
 from api.v1.models.api_film_models import FilmBase, FilmFull
+from api.v1.models.api_query_params_model import (FilmListSearch,
+                                                  SearchQueryParams)
 from services.film import FilmService, get_film_service
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter()
 
@@ -17,15 +19,19 @@ router = APIRouter()
             tags=['Фильмы']
             )
 async def film_search(film_service: FilmService = Depends(get_film_service),
-                      page: int = Query(default=1, alias="page_number", ge=1),
-                      size: int = Query(default=25, alias="page_size", ge=1, le=100),
-                      query: Optional[str] = Query(..., alias='query'),
-                      ) -> List[FilmBase]:
-    films = await film_service.search_films(query=query, page=page, size=size)
+                      query_params: SearchQueryParams = Depends()) -> List[FilmBase]:
+    """
+    Метод (ручка) для обработки запросов на поиск фильмов по запросу. Совпадения ищутся в названии и описании фильма.
+
+    :param film_service: класс, предоставляющий интерфейс для получения информации о фильмах из БД
+    :param query_params: параметры запроса API
+    :return: список документов в виде Pydantic класса
+    """
+    films = await film_service.search_films(query=query_params)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
-    return [FilmBase(**film.dict()) for film in films]
+    return [FilmBase(**film) for film in films]
 
 
 @router.get('/{film_id}',
@@ -36,14 +42,17 @@ async def film_search(film_service: FilmService = Depends(get_film_service),
             tags=['Фильмы']
             )
 async def film_details(film_id: str, film_service: FilmService = Depends(get_film_service)) -> FilmFull:
-    film = await film_service.get_by_id(film_id)
+    """
+    Метод (ручка) выводит детальную информацию по id фильма в виде Pydantic-класса FilmFull
+    :param film_id: id фильма
+    :param film_service: класс, предоставляющий интерфейс для получения информации о фильмах из БД
+    :return:
+    """
+    film = await film_service.get_item(doc_id=film_id)
     if not film:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='film not found')
 
-    return FilmFull(**film.dict())
-
-
-sort_regex = "^(asc|desc)$"
+    return FilmFull(**film)
 
 
 @router.get('',
@@ -54,15 +63,19 @@ sort_regex = "^(asc|desc)$"
             tags=['Фильмы']
             )
 async def film_list(film_service: FilmService = Depends(get_film_service),
-                    page: int = Query(default=1, alias="page_number", ge=1),
-                    size: int = Query(default=25, alias="page_size", ge=1, le=100),
-                    sort_imdb: Optional[str] = Query(default='desc', regex=sort_regex, alias='sort_by_rating'),
-                    genre_id: Optional[str] = Query(default=None, alias='filter[genre]'),
-                    ) -> List[FilmBase]:
+                    query_params: FilmListSearch = Depends()) -> List[FilmBase]:
+    """
+    Метод (ручка), позволяющий получить список фильмов по различным параметрам запроса(пагинацией,
+    фильтрацией по жанрам, сортировкой по рейтингу).
+
+    :param film_service: класс, предоставляющий интерфейс для получения информации о фильмах из БД
+    :param query_params: параметры запроса API
+    :return:
+    """
     # TODO: прокинуть параметры сортировки и реализовать
     # TODO: переделать валидацию size на дискретные значения. например, 25, 50, 100
-    films = await film_service.get_list_films(page=page, size=size, sort_imdb=sort_imdb, genre_id=genre_id)
+    films = await film_service.get_list_films(query_params)
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
-    return [FilmBase(**film.dict()) for film in films]
+    return [FilmBase(**film) for film in films]

@@ -1,68 +1,42 @@
-import asyncio
-from typing import List
-
 import pytest
 
-from tests.functional.conftest import (es_client, es_movies_data,
-                                       es_write_data, redis_client)
-from tests.functional.settings import movies_settings
+from tests.functional.settings import movies_settings, person_settings
+from tests.functional.testdata.search_data import (
+    FILM_FULL_TEXT_SEARCH, FILMS_SEARCH_STATUS_AND_LENGTH_QUERIES,
+    PERSONS_FUZZY_SEARCH_QUERIES)
 
 
 @pytest.mark.parametrize(
     'query_data, expected_answer',
-    [
-        (
-            {'query': 'The Star',
-             'page_number': 1,
-             'page_size': 50},
-            {'status': 200, 'length': 50}
-        ),
-        (
-            {'query': 'Mashed potato',
-             'page_number': 1,
-             'page_size': 50},
-            {'status': 404, 'length': 1}
-        )
-    ]
+    FILMS_SEARCH_STATUS_AND_LENGTH_QUERIES
 )
 @pytest.mark.asyncio
-async def test_movies_search(es_client, make_get_request, es_write_data, es_movies_data: List[dict],
-                             es_create_movies_index, query_data: dict, expected_answer: dict):
-    # await es_create_index(movies_settings)
-    if await es_client.indices.exists(index=movies_settings.es_index):
-        await es_write_data(es_movies_data, movies_settings)
+async def test_movies_search(get_data, query_data: dict, expected_answer: dict):
+    """Тест на нечеткий поиск фильмов и статус ответа. Также тестируется отсутствие результата."""
 
-        await asyncio.sleep(0.5)
-
-        response = await make_get_request('/search', query_data, movies_settings)
-        assert expected_answer == response
+    response = await get_data('/search', query_data, movies_settings)
+    assert expected_answer == response.validation
 
 
 @pytest.mark.parametrize(
     'query_data, expected_answer',
-    [
-        (
-            {'query': 'The Star',
-             'page_number': 1,
-             'page_size': 25},
-            {'status': 200, 'length': 25}
-        ),
-        (
-            {'query': 'Mashed potatos',
-             'page_number': 1,
-             'page_size': 50},
-            {'status': 404, 'length': 1}
-        )
-    ]
+    PERSONS_FUZZY_SEARCH_QUERIES
 )
 @pytest.mark.asyncio
-async def test_movies_search2(es_client, make_get_request, es_write_data, es_movies_data: List[dict],
-                              es_create_movies_index, query_data: dict, expected_answer: dict):
+async def test_person_fuzzy_search(get_data, query_data: dict, expected_answer: dict):
+    """Тест на нечеткий поиск персоны."""
 
-    if await es_client.indices.exists(index=movies_settings.es_index):
-        await es_write_data(es_movies_data, movies_settings)
+    response = await get_data('/search', query_data, person_settings)
+    assert expected_answer == response.data
 
-    await asyncio.sleep(0.5)
 
-    response = await make_get_request('/search', query_data, movies_settings)
-    assert expected_answer == response
+@pytest.mark.parametrize(
+    'query_data, expected_answer',
+    FILM_FULL_TEXT_SEARCH
+)
+@pytest.mark.asyncio
+async def test_films_fuzzy_search(get_data, query_data: dict, expected_answer: dict):
+    """Тест на нечеткий поиск фильмов."""
+
+    response = await get_data('/search', query_data, movies_settings)
+    assert expected_answer == response.data

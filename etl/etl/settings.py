@@ -15,7 +15,7 @@ dsl = {
     'options': '-c search_path=content'
 }
 
-ELASTIC_HOST = os.getenv('ELASTIC_HOST', 'localhost')
+ELASTIC_HOST = os.getenv('ELASTIC_HOST', 'http://localhost')
 ELASTIC_PORT = int(os.getenv('ELASTIC_PORT', 9200))
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')

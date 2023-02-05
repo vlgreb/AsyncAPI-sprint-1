@@ -1,12 +1,13 @@
+import os
 import time
 
 from redis import Redis, exceptions
 
-from tests.functional.settings import connection_settings
-
 if __name__ == '__main__':
 
-    redis = Redis(host=connection_settings.redis_host)
+    redis_host = os.getenv('REDIS_HOST', default='localhost')
+
+    redis = Redis(host=redis_host)
 
     while True:
 

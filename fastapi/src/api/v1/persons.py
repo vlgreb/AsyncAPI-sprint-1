@@ -1,11 +1,13 @@
 from http import HTTPStatus
-from typing import List, Optional
+from typing import List
 
 from api.v1.models.api_film_models import FilmBase
 from api.v1.models.api_person_models import PersonBase, PersonFull
+from api.v1.models.api_query_params_model import (BaseListQuery,
+                                                  SearchQueryParams)
 from services.person import PersonService, get_person_service
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter()
 
@@ -18,15 +20,12 @@ router = APIRouter()
             tags=['Персоны']
             )
 async def person_search(person_service: PersonService = Depends(get_person_service),
-                        page: int = Query(default=1, alias="page_number", ge=1),
-                        size: int = Query(default=25, alias="page_size", ge=1, le=100),
-                        query: Optional[str] = Query(..., alias='query'),
-                        ) -> List[PersonBase]:
-    persons = await person_service.search_persons(query=query, page=page, size=size)
+                        query: SearchQueryParams = Depends()) -> List[PersonBase]:
+    persons = await person_service.search_persons(query=query)
     if not persons:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='persons not found')
 
-    return [PersonFull(**person.dict()) for person in persons]
+    return [PersonFull(**person) for person in persons]
 
 
 @router.get('/{person_id}/film',
@@ -42,7 +41,7 @@ async def films_with_person_details(person_id: str,
     if not films:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='person not found')
 
-    return [FilmBase(**film.dict()) for film in films]
+    return [FilmBase(**film) for film in films]
 
 
 @router.get('/{person_id}',
@@ -53,11 +52,11 @@ async def films_with_person_details(person_id: str,
             tags=['Персоны']
             )
 async def person_details(person_id: str, person_service: PersonService = Depends(get_person_service)) -> PersonFull:
-    person = await person_service.get_by_id(person_id)
+    person = await person_service.get_item(doc_id=person_id)
     if not person:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='person not found')
 
-    return PersonFull(**person.dict())
+    return PersonFull(**person)
 
 
 sort_regex = "^(asc|desc)$"
@@ -71,13 +70,11 @@ sort_regex = "^(asc|desc)$"
             tags=['Персоны']
             )
 async def person_list(person_service: PersonService = Depends(get_person_service),
-                      page: int = Query(default=1, alias="page_number", ge=1),
-                      size: int = Query(default=25, alias="page_size", ge=1, le=100)
-                      ) -> List[PersonBase]:
+                      query: BaseListQuery = Depends()) -> List[PersonBase]:
     # TODO: прокинуть параметры сортировки и реализовать
     # TODO: переделать валидацию size на дискретные значения. например, 25, 50, 100
-    persons = await person_service.get_list_persons(page=page, size=size)
+    persons = await person_service.get_list_persons(query)
     if not persons:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='films not found')
 
-    return [PersonBase(**person.dict()) for person in persons]
+    return [PersonBase(**person) for person in persons]

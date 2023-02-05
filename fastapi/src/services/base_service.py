@@ -1,161 +1,85 @@
 import logging
-from typing import List, Optional
+from abc import ABC, abstractmethod
+from typing import List
 
 from aioredis import Redis
-from api.v1.models.api_film_models import FilmFull
-from api.v1.models.api_genre_models import GenreBase
-from api.v1.models.api_person_models import PersonFull
-from elasticsearch import AsyncElasticsearch, NotFoundError
-from models.models import Film, Person, Genre
-
-MODELS = {
-    "movies": Film,
-    "persons": Person,
-    "genres": Genre
-}
-
-CACHE_EXPIRE_IN_SECONDS = 60 * 5
+from db.db_data_getter import ElasticDataGetter
+from db.storage import RedisStorage
+from utils.cache import cache
 
 
-class BaseDataService:
-    """
-    Класс представляет базовый интерфейс для работы с ElasticSearch и Redis. Получение по id (или прочему ключу)
-    документов и их кеширование.
-    """
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch, index_name: str = '', service_name: str = 'base'):
-        self.redis = redis
-        self.elastic = elastic
-        self.index_name = index_name
-        # TODO: выпилить переменную service_name, если получится
-        self.service_name = service_name
+class DataService(ABC):
+    """Абстрактный класс для работы с данными"""
 
-    async def get_by_id(self, doc_id: str) -> FilmFull | PersonFull | GenreBase | None:
+    @abstractmethod
+    async def get_item(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    async def get_list_of_items(self, *args, **kwargs):
+        pass
+
+
+class BaseDataService(DataService):
+    """Класс для взаимодействия с БД и кэшем"""
+
+    def __init__(self, elastic_client, redis_client: Redis):
+        self._cache = RedisStorage(redis_client)
+        self._db_handler = ElasticDataGetter(elastic_client)
+        self.index_name = ''
+
+    @cache
+    async def get_item(self, doc_id: str) -> dict | None:
         """
-        Возвращает документ по ключу (id). Ищет документ по ключу doc_id в кэше Redis и,
-        если не находит, обращается к ElasticSearch. Возвращает None при отсутствии в Elastic.
+        Метод получает документ в виде словаря
 
-        :param doc_id: строка (ключ, id), по которой ищется документ
-        :return: экземпляр модели данных self.model (FilmFull | PersonFull | GenreBase) или None
-        """
-        data = await self._get_item_from_cache(doc_id)
-        if not data:
-            data = await self._get_item_from_elastic(doc_id)
-            if not data:
-                return None
-            await self._put_item_to_cache(data)
-
-        else:
-            data = MODELS[self.index_name].parse_raw(data)
-        return data
-
-    async def _get_item_from_cache(self, doc_id: str) -> FilmFull | PersonFull | GenreBase | None:
-        """
-        Ищет документ по ключу doc_id в кэше Redis
-        :param doc_id: строка (ключ, id), по которой ищется документ
-        :return: FilmFull | PersonFull | GenreBase | None
-        """
-        if self.redis.exists(doc_id):
-            logging.info('[%s] from cache by id', self.service_name)
-            return await self.redis.get(f'{self.index_name}{doc_id}')
-
-    async def _put_item_to_cache(self, doc: FilmFull | PersonFull | GenreBase) -> None:
-        """
-        Сохраняет документ в кэш Redis.
-        :param doc: экземпляр модели данных FilmFull | PersonFull | GenreBase
-        :return: None
-        """
-        logging.info('[%s] write to cache by id', self.service_name)
-        await self.redis.set(f'{self.index_name}{doc.id}', doc.json(), expire=CACHE_EXPIRE_IN_SECONDS)
-
-    async def _get_item_from_elastic(self, doc_id: str) -> FilmFull | PersonFull | GenreBase | None:
+        :param doc_id: id документа в индексе БД
+        :return: документ в виде словаря
         """
 
-        :param doc_id: строка (ключ, id), по которой ищется документ
-        :return: FilmFull | PersonFull | GenreBase | None
-        """
-        try:
-            doc = await self.elastic.get(index=self.index_name, id=doc_id)
-            logging.info('[%s] from elastic by id', self.service_name)
+        return await self._db_handler.get_by_id(index=self.index_name, doc_id=doc_id)
 
-            result = MODELS[self.index_name](**doc['_source'])
-        except NotFoundError:
-            logging.info('[%s] can\'t find in elastic by id', self.service_name)
-            return None
-        return result
-
-    async def _get_full_data_from_cache(self, key: str, redis_range: int) -> Optional[list]:
+    @cache
+    async def get_list_of_items(self, api_query_params: dict, elastic_query: dict,
+                                index_name: str = None) -> List[dict] | None:
         """
-        Метод предназначен для получения массива (списка) данных из кэша
-        :param key: ключ, по которому требуеся достать данные из кэша
-        :param redis_range:
-        :return: Optional[list]
-        """
-        data = await self.redis.lrange(key, 0, redis_range)
-        return data
-
-    async def _put_full_data_to_cache(self, data: list, key: str):
-        """
-        Метод сохраняет в кэш массив (список) данных по ключу key.
-        :param data:
-        :param key:
+        Метод получает список документов в виде словарей
+        :param api_query_params:
+        :param elastic_query:
+        :param index_name:
         :return:
         """
-        logging.info('[%s] write film_data to cache', self.service_name)
-        await self.redis.rpush(key, *data)
+        index_name = index_name if index_name else self.index_name
+        return await self._db_handler.get_by_query(index=index_name, query=elastic_query)
 
-    @staticmethod
-    def _get_hash(kwargs):
-        return str(hash(kwargs))
-
-    async def _get_data(self, body: dict, size: int,
-                        index_name: str = None) -> List[FilmFull | PersonFull | GenreBase] | None:
+    def _get_key(self, *args, **kwargs) -> str | None:
         """
-        Метод достает данные из кэша или эластика
-        :param body: тело запроса
-        :param size: количество записей
-        :param index_name: имя индекса
-        :param model: модель для парсинга возвращаемого результата
+        Метод формирует ключ для постоянного хранилища на основе имени индекса ElasticSearch и параметров
+        запроса ручек.
+        :param query_params: параметры запроса
         :return:
         """
 
-        if not index_name:
-            index_name = self.index_name
-
-        redis_key = self._get_hash(f'{str(body)}{index_name}')
-
-        data = await self._get_full_data_from_cache(key=redis_key, redis_range=size)
-
-        if not data:
-
-            data = await self._get_data_from_elastic(body=body, index=index_name)
-
-            if not data:
-                return None
-
-            cache_data = [item.json() for item in data]
-
-            await self._put_full_data_to_cache(data=cache_data, key=redis_key)
-
+        if args:
+            param = args[0]
         else:
-            data = [MODELS[self.index_name].parse_raw(item) for item in data]
-            logging.info('[%s] data from cache', self.service_name)
+            param = kwargs.get('doc_id') or kwargs.get('api_query_params')
 
-        return data
+        if not param:
+            raise AttributeError("Check naming to generate cache key")
 
-    async def _get_data_from_elastic(self, body: dict, index: str) -> List[FilmFull | PersonFull | GenreBase] | None:
-        """
-        Возвращает список данных из кэша или Elastic
-        :param body: тело запроса к elasticsearch
-        :return: List[FilmFull | PersonFull | GenreBase] | None
-        """
+        return f'{self.index_name}::{param}'
+
+    async def _validation_page(self, page: int, size: int, body: dict) -> int:
 
         try:
-            data = await self.elastic.search(index=index, body=body)
-            data = [MODELS[self.index_name](**item['_source']) for item in data['hits']['hits']]
+            docs_in_db = await self._db_handler.get_count_docs(index=self.index_name, body=body)
 
-            logging.info('[%s] get data from elastic', self.service_name)
-        except NotFoundError:
-            logging.info("[%s] can't find data in elastic", self.service_name)
-            return None
+            new_page = docs_in_db // size + bool(docs_in_db % size)
+            if docs_in_db and page > new_page:
+                page = new_page
 
-        return data
+        except (KeyError, TypeError):
+            logging.info("[%s] can't count docs in db", type(self).__name__)
+
+        return page

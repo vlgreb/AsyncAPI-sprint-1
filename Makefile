@@ -1,7 +1,12 @@
 test-local:
+	docker-compose down
 	docker-compose -f docker-compose.local-testing.yml up -d
-	echo 'ElasticSearch is empty and ready for testing'
-	pytest tests/
+	python fastapi/src/main.py
+
+make run-tests:
+	docker-compose down
+	docker-compose -f docker-compose.testing.yml up --attach tests --exit-code-from tests
+
 
 up:
 	make build
@@ -13,7 +18,6 @@ dev-up:
 	make dev-build
 	make dev-start
 	make admin-up
-	make start-load-data-to-elastic
 
 build:
 	docker-compose build --no-cache
@@ -61,4 +65,4 @@ remove-all:
 	docker-compose down -v
 
 force-remove:
-	docker-compose down --remove-orphans
+	docker-compose down --remove-orphans -v

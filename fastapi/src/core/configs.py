@@ -9,7 +9,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class BaseConfig(BaseSettings):
 
     class Config:
-        env_file = os.path.join(BASE_DIR, '../../.env')
+        env_file = os.path.join(BASE_DIR, '../../.env.local')
         env_file_encoding = 'utf-8'
 
 

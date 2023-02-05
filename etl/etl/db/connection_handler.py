@@ -36,7 +36,7 @@ def create_redis_connection(host):
     max_tries=10
 )
 def create_elastic_connection(host, port):
-    es = Elasticsearch(f'http://{host}:{port}')
+    es = Elasticsearch(f'{host}:{port}')
     if not es.ping():
         raise ElasticConnectionError("Elastic server is not available")
     return es

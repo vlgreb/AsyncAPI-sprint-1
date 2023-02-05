@@ -1,6 +1,23 @@
 version: '3.8'
 services:
 
+  db:
+    image: postgres:14
+    container_name: db_container
+    env_file:
+      - ./.env
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}" ]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+    restart: on-failure
+    volumes:
+      - postgresql_volume_compose:/var/lib/postgresql/data
+      - ./etl/etl/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+    ports:
+      - "5432:5432"
+
   redis:
     image: redis:7.0.7
     container_name: redis_container
@@ -51,9 +68,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  fastapi:
+  etl:
     build:
-      context: ./fastapi
+      context: ./etl/etl
     env_file:
       - ./.env
     depends_on:
@@ -61,11 +78,28 @@ services:
         condition: service_healthy
       elastic:
         condition: service_healthy
-    container_name: fastapi_container
+    container_name: etl_container
     restart: unless-stopped
-    entrypoint: sh -c "uvicorn main:app --host 0.0.0.0 --port 8001"
-    ports:
-      - "8001:8001"
+    entrypoint: sh -c "python etl.py"
+
+#  fastapi:
+#    build:
+#      context: ./fastapi
+#    image: fastapi-image
+#    env_file:
+#      - ./.env
+#    depends_on:
+#      db:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      elastic:
+#        condition: service_healthy
+#    container_name: fastapi_container
+#    restart: unless-stopped
+#    entrypoint: sh -c "uvicorn main:app --host 0.0.0.0 --port 8001"
+#    ports:
+#      - "8001:8001"
 
 volumes:
   postgresql_volume_compose:
