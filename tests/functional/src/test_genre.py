@@ -2,6 +2,7 @@ import pytest
 from aioredis import Redis
 from orjson import orjson
 
+from tests.functional.utils.helpers import get_data
 from tests.functional.settings import genre_settings
 from tests.functional.testdata.genre_data import (ADVENTURE_GENRE,
                                                   FIRST_PAGE_GENRES,
@@ -18,14 +19,14 @@ from tests.functional.testdata.genre_data import (ADVENTURE_GENRE,
     ]
 )
 @pytest.mark.asyncio
-async def test_get_genre_by_id(get_data, query, expected_answer):
+async def test_get_genre_by_id(api_session, query, expected_answer):
     """
     Тест на запрос несуществующего жанра
     :param query:
     :param expected_answer:
     :return: GenreFull.as_dict
     """
-    response = await get_data(query=query, query_params=None, settings=genre_settings)
+    response = await get_data(api_session=api_session, query=query, query_params=None, settings=genre_settings)
 
     assert expected_answer == response.data
 
@@ -57,7 +58,7 @@ async def test_get_genre_by_id(get_data, query, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_get_film_by_genre(get_data, query_params, expected_answer):
+async def test_get_film_by_genre(api_session, query_params, expected_answer):
     """
     Тесты списка жанров + валидация последней страницы
     :param query_params:
@@ -65,7 +66,7 @@ async def test_get_film_by_genre(get_data, query_params, expected_answer):
     :return: GenreFull.as_dict
     """
 
-    response = await get_data(query='', query_params=query_params, settings=genre_settings)
+    response = await get_data(api_session=api_session, query='', query_params=query_params, settings=genre_settings)
 
     assert expected_answer == response.data
 
@@ -80,7 +81,7 @@ async def test_get_film_by_genre(get_data, query_params, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_cache_genre(get_data, redis_client: Redis, query: str, expected_answer):
+async def test_cache_genre(api_session, redis_client: Redis, query: str, expected_answer):
     """Тест на поиск жанра по ID + на работу кэша"""
 
     key = f'genres::{query.strip("/")}'
@@ -89,7 +90,7 @@ async def test_cache_genre(get_data, redis_client: Redis, query: str, expected_a
 
     assert await redis_client.exists(key) == 0
 
-    response = await get_data(query=query, query_params=None, settings=genre_settings)
+    response = await get_data(api_session=api_session, query=query, query_params=None, settings=genre_settings)
 
     assert await redis_client.exists(key)
 

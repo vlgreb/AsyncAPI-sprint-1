@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 BEN_HOUSER_INFO = {
   "id": "54f86b6e-510a-4507-90d4-527cad27a644",
   "full_name": "Ben Houser",
@@ -40,48 +42,48 @@ PERSONS_PAGINATION_PARAMS = [
   (
     {'page_number': 1,
      'page_size': 25},
-    {'status': 200, 'length': 25}
+    {'status': HTTPStatus.OK, 'length': 25}
   ),
   (
     {'page_number': 1,
      'page_size': 50},
-    {'status': 200, 'length': 50}
+    {'status': HTTPStatus.OK, 'length': 50}
   ),
   (
     {'page_number': 1,
      'page_size': 100},
-    {'status': 200, 'length': 100}
+    {'status': HTTPStatus.OK, 'length': 100}
   ),
   (
     {'page_number': -1,
      'page_size': 50},
-    {'status': 422, 'length': 1}
+    {'status': HTTPStatus.UNPROCESSABLE_ENTITY, 'length': 1}
   ),
 
   (
     {'page_number': 'one',
      'page_size': 50},
-    {'status': 422, 'length': 1}
+    {'status': HTTPStatus.UNPROCESSABLE_ENTITY, 'length': 1}
   ),
   (
     {'page_number': 1,
      'page_size': 'fifty'},
-    {'status': 422, 'length': 1}
+    {'status': HTTPStatus.UNPROCESSABLE_ENTITY, 'length': 1}
   )
 ]
 
 PERSONS_LIST_REQUEST_STATUS = [
   (
     '',
-    {'status': 200, 'length': 25}
+    {'status': HTTPStatus.OK, 'length': 25}
   ),
   (
     '/e6e2026b-961b-4d93-aa96-1083e77e179d',
-    {'status': 200, 'length': 4}
+    {'status': HTTPStatus.OK, 'length': 4}
   ),
   (
     '/54f86b6e-510a-4507-90d4-nosuchdataaa',
-    {'status': 404, 'length': 1}
+    {'status': HTTPStatus.NOT_FOUND, 'length': 1}
   )
 ]
 

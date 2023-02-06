@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 from .person_data import BEN_HOUSER_INFO
 
 FILMS_SEARCH_STATUS_AND_LENGTH_QUERIES = [
@@ -5,31 +7,31 @@ FILMS_SEARCH_STATUS_AND_LENGTH_QUERIES = [
         {'query': 'The Star',
          'page_number': 1,
          'page_size': 25},
-        {'status': 200, 'length': 25}
+        {'status': HTTPStatus.OK, 'length': 25}
     ),
     (
         {'query': 'war of stars',
          'page_number': 1,
          'page_size': 25},
-        {'status': 200, 'length': 25}
+        {'status': HTTPStatus.OK, 'length': 25}
     ),
     (
         {'query': 'star wors',
          'page_number': 1,
          'page_size': 25},
-        {'status': 200, 'length': 25}
+        {'status': HTTPStatus.OK, 'length': 25}
     ),
     (
         {'query': 'wor stor',
          'page_number': 1,
          'page_size': 25},
-        {'status': 200, 'length': 25}
+        {'status': HTTPStatus.OK, 'length': 25}
     ),
     (
         {'query': 'foooooo123',
          'page_number': 1,
          'page_size': 25},
-        {'status': 404, 'length': 1}
+        {'status': HTTPStatus.NOT_FOUND, 'length': 1}
     )
 ]
 

@@ -1,7 +1,9 @@
 import pytest
 from aioredis import Redis
 from orjson import orjson
+from http import HTTPStatus
 
+from tests.functional.utils.helpers import get_data
 from tests.functional.settings import movies_settings
 from tests.functional.testdata.film_data import (COMEDY_FILMS,
                                                  DOCUMENTARY_FILMS,
@@ -14,25 +16,24 @@ from tests.functional.testdata.film_data import (COMEDY_FILMS,
     [
         (
             '',
-            {'status': 200, 'length': 25}
+            {'status': HTTPStatus.OK, 'length': 25}
         ),
         (
             '/97f168bd-d10d-481b-ad38-89d252a13feb',
-            {'status': 200, 'length': 9}
+            {'status': HTTPStatus.OK, 'length': 9}
         ),
     ]
 )
 @pytest.mark.asyncio
-async def test_get_request_status(get_data, query, expected_answer):
+async def test_get_request_status(api_session, query, expected_answer):
     """
     Тест на статус длину возвращаемого объекта по запросу
-    :param get_data:
     :param query:
     :param expected_answer:
     :return: {'status': ..., 'length': ...}
     """
 
-    response = await get_data(query=query, query_params=None, settings=movies_settings)
+    response = await get_data(api_session=api_session, query=query, query_params=None, settings=movies_settings)
 
     assert expected_answer == response.validation
 
@@ -47,14 +48,14 @@ async def test_get_request_status(get_data, query, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_get_film_by_id(get_data, query, expected_answer):
+async def test_get_film_by_id(api_session, query, expected_answer):
     """
     Тест на запрос несуществующего фильма
     :param query:
     :param expected_answer:
     :return: GenreFull.as_dict
     """
-    response = await get_data(query=query, query_params=None, settings=movies_settings)
+    response = await get_data(api_session=api_session, query=query, query_params=None, settings=movies_settings)
 
     assert expected_answer == response.data
 
@@ -73,7 +74,7 @@ async def test_get_film_by_id(get_data, query, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_get_sorted_films(get_data, query_params, expected_answer):
+async def test_get_sorted_films(api_session, query_params, expected_answer):
     """
     Тесты на получение второй страницы отсортированных фильмов при размере странице 10
     :param query_params:
@@ -81,7 +82,7 @@ async def test_get_sorted_films(get_data, query_params, expected_answer):
     :return: GenreFull.as_dict
     """
 
-    response = await get_data(query='', query_params=query_params, settings=movies_settings)
+    response = await get_data(api_session=api_session, query='', query_params=query_params, settings=movies_settings)
 
     assert expected_answer == response.data
 
@@ -110,7 +111,7 @@ async def test_get_sorted_films(get_data, query_params, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_get_film_by_genre(get_data, query_params, expected_answer):
+async def test_get_film_by_genre(api_session, query_params, expected_answer):
     """
     Тесты с фильтрацией фильмов по жанрам. Возвращает 2 фильма, отсортированных по рейтингу
     :param query_params:
@@ -118,7 +119,7 @@ async def test_get_film_by_genre(get_data, query_params, expected_answer):
     :return: GenreFull.as_dict
     """
 
-    response = await get_data(query='', query_params=query_params, settings=movies_settings)
+    response = await get_data(api_session=api_session, query='', query_params=query_params, settings=movies_settings)
 
     assert expected_answer == response.data
 
@@ -145,7 +146,7 @@ async def test_get_film_by_genre(get_data, query_params, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_get_film_by_genre(get_data, query_params, expected_answer):
+async def test_get_film_by_genre(api_session, query_params, expected_answer):
     """
     Тесты на валидацию последней страницы
     :param query_params:
@@ -153,7 +154,7 @@ async def test_get_film_by_genre(get_data, query_params, expected_answer):
     :return: GenreFull.as_dict
     """
 
-    response = await get_data(query='', query_params=query_params, settings=movies_settings)
+    response = await get_data(api_session=api_session, query='', query_params=query_params, settings=movies_settings)
 
     assert expected_answer == response.data
 
@@ -168,7 +169,7 @@ async def test_get_film_by_genre(get_data, query_params, expected_answer):
     ]
 )
 @pytest.mark.asyncio
-async def test_cache_film(get_data, redis_client: Redis, query: str, expected_answer):
+async def test_cache_film(api_session, redis_client: Redis, query: str, expected_answer):
     """Тест на поиск фильма по ID + на работу кэша"""
 
     key = f'movies::{query.strip("/")}'
@@ -177,7 +178,7 @@ async def test_cache_film(get_data, redis_client: Redis, query: str, expected_an
 
     assert await redis_client.exists(key) == 0
 
-    response = await get_data(query=query, query_params=None, settings=movies_settings)
+    response = await get_data(api_session=api_session, query=query, query_params=None, settings=movies_settings)
 
     assert await redis_client.exists(key)
 
